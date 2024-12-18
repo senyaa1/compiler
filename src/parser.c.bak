@@ -1,0 +1,41 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+
+#include "parser.h"
+#include "lexer.h"
+
+void node_free(ast_node_t* node)
+{
+	if(!node)	return;
+
+	node_free(node->left);
+	node_free(node->right);
+
+	free(node);
+}
+
+ast_node_t* node_create()
+{
+	ast_node_t* node = (ast_node_t*)calloc(1, sizeof(ast_node_t));
+	return node;
+}
+
+ast_node_t* node_copy(ast_node_t* node)
+{
+	if(!node) return 0;
+
+	ast_node_t* new_node = (ast_node_t*)calloc(1, sizeof(ast_node_t));
+	memcpy(new_node, node, sizeof(ast_node_t));
+	node->left = node_copy(node->left);
+	node->right = node_copy(node->right);
+	return new_node;
+}
+
+
+ast_node_t* parse(token_t* tokens)
+{
+
+}
