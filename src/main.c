@@ -21,7 +21,6 @@
 
 /*	syntax example
 	
-	ять-крест-крест (ykk)
  
 	*/
 
@@ -35,6 +34,11 @@ int main(int argc, char** argv)
 
 	// add expression support
 	const character_t *input = "func f(x) {var x = (4 + 2) * 2 / 1; } func main(a, b, c) { var x = 40; }";
+	// const character_t *input = "if (x) { var y = 5 + 3; }";
+	// const character_t *input = "while (x) { var y = 5 + 3; }";
+	// const character_t *input = "var x = 5 + 3; var y = 2; var z = x + y;";
+	// const character_t *input = "var x = 5 + 3; x = x + 4;";
+	// const character_t *input = "2 - 5";
 	// const character_t *input = "var x = 4 + 2; var y = x; func amogus(a) { var b = a; }";
 	// const character_t *input = "";
 

@@ -6,23 +6,14 @@
 
 #include "lexer.h"
 
-/*
-    if
-    else
-
-    while
-
-    var 
-    func
-    
-    */
-
 #define KEYWORDS        \
     KEYWORD(var)        \
     KEYWORD(func)       \
     KEYWORD(if)         \
     KEYWORD(else)       \
     KEYWORD(while)       \
+    KEYWORD(out)       \
+    KEYWORD(in)       \
 
 
 
@@ -127,13 +118,16 @@ token_t next_token(lexer_t *lexer)
     TOKEN_CHAR(TOKEN_RBRACE, '}', "}")
     TOKEN_CHAR(TOKEN_COMMA, ',', ",")
     TOKEN_CHAR(TOKEN_SEMICOLON, ';', ";")
-    TOKEN_CHAR(TOKEN_ASSIGN, '=', "=")
         
     TOKEN_CHAR(TOKEN_PLUS, '+', "+")
     TOKEN_CHAR(TOKEN_MINUS, '-', "-")
     TOKEN_CHAR(TOKEN_STAR, '*', "*")
     TOKEN_CHAR(TOKEN_SLASH, '/', "/")
     TOKEN_CHAR(TOKEN_CARET, '^', "^")
+
+    TOKEN_CHAR(TOKEN_GREATER, '>', ">")
+    TOKEN_CHAR(TOKEN_LESS, '<', "<")
+    TOKEN_CHAR(TOKEN_EQ, '=', "=")
 
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') 
     {

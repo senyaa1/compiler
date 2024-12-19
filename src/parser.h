@@ -69,5 +69,6 @@ ASTNode* parse_function();
 ASTNode* parse_if();
 ASTNode* parse_while();
 ASTNode* parse_primary();
+ASTNode* parse_math_expr();
 ASTNode* parse_program(token_t* tokens);
 void free_ast(ASTNode* node);

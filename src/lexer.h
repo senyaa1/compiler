@@ -17,7 +17,6 @@ typedef enum TOKEN_TYPES : uint8_t
     TOKEN_RBRACE,
     TOKEN_COMMA,
     TOKEN_SEMICOLON,
-    TOKEN_ASSIGN,
     TOKEN_KEYWORD,
     TOKEN_IDENTIFIER,
     TOKEN_NUMBER,
@@ -25,7 +24,10 @@ typedef enum TOKEN_TYPES : uint8_t
     TOKEN_MINUS,
     TOKEN_STAR,
     TOKEN_SLASH,
-    TOKEN_CARET
+    TOKEN_CARET,
+    TOKEN_GREATER,
+    TOKEN_LESS,
+    TOKEN_EQ,
 } token_type_t;
 
 typedef union 

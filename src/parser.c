@@ -7,7 +7,6 @@
 #include "parser.h"
 #include "debugger.h"
 
-ASTNode* parse_math_expr();
 static token_t* tokens;
 static size_t token_index;
 
@@ -26,16 +25,12 @@ int expect_token(token_type_t type) {
     }
     print_backtrace();
     fprintf(stderr, "Unexpected token: %d, while was expecting %d\n", current_token()->type, type);
-    exit(1);
+    return 0;
 }
 
 // AST creation
 ASTNode* create_ast_node(ast_node_type_t type) {
-    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
-    if (!node) {
-        perror("Failed to allocate ASTNode");
-        exit(1);
-    }
+    ASTNode* node = (ASTNode*)calloc(1, sizeof(ASTNode));
     node->type = type;
     return node;
 }
@@ -69,7 +64,12 @@ ASTNode* parse_statement() {
             return parse_if();
         } else if (strcmp(current_token()->value.str, "while") == 0) {
             return parse_while();
+        } else if (strcmp(current_token()->value.str, "out") == 0) {
+            // return parse_();
+        }else if (strcmp(current_token()->value.str, "in") == 0) {
+            // return parse_while();
         }
+
     }
 
     return parse_expression();
@@ -83,7 +83,7 @@ ASTNode* parse_declaration() {
     node->data.declaration.identifier->data.identifier = strdup(current_token()->value.str);
     expect_token(TOKEN_IDENTIFIER);
 
-    if (current_token()->type == TOKEN_ASSIGN) {
+    if (current_token()->type == TOKEN_EQ) {
         advance_token();
         printf("parsing expression to init var\n");
         node->data.declaration.initializer = parse_expression();
@@ -164,7 +164,8 @@ ASTNode* parse_while() {
 }
 
 ASTNode* parse_expression() {
-    if (current_token()->type == TOKEN_IDENTIFIER && tokens[token_index + 1].type == TOKEN_ASSIGN) {
+    if (current_token()->type == TOKEN_IDENTIFIER && tokens[token_index + 1].type == TOKEN_EQ) {
+        printf("parsing assignment\n");
         return parse_assignment();
     }
     return parse_math_expr();
@@ -180,10 +181,10 @@ ASTNode* parse_assignment() {
     expect_token(TOKEN_IDENTIFIER);
 
     // Consume '='
-    expect_token(TOKEN_ASSIGN);
+    expect_token(TOKEN_EQ);
 
     // Parse right-hand side (expression)
-    node->data.assignment.right = parse_expression();
+    node->data.assignment.right = parse_math_expr();
 
     return node;
 }
@@ -207,13 +208,13 @@ ASTNode* parse_primary()
         ASTNode* expr = parse_math_expr();
         if (current_token()->type != TOKEN_RPAREN) {
             fprintf(stderr, "Expected ')' after expression\n");
-            exit(EXIT_FAILURE);
+            return 0;
         }
         advance_token(); // Consume ')'
         return expr;
     } 
         fprintf(stderr, "Unexpected token: %d\n", current_token()->type);
-        exit(EXIT_FAILURE);
+            return 0;
     //
     // if (current_token()->type == TOKEN_NUMBER) {
     //     ASTNode* node = create_ast_node(AST_NUMBER);
@@ -242,7 +243,7 @@ ASTNode* parse_primary()
                 current_token()->type == TOKEN_KEYWORD || current_token()->type == TOKEN_IDENTIFIER
                 ? current_token()->value.str 
                 : "N/A");
-    exit(1);
+    return 0;
 }
 // Utility for freeing the AST
 void free_ast(ASTNode* node) {
@@ -331,6 +332,8 @@ static ASTNode* create_binary_op_node(ASTNode* left, token_type_t op, ASTNode* r
 
 static ASTNode* parse_term() {
     ASTNode* node = parse_primary();
+    if(!node) return 0;
+
     while (current_token()->type == TOKEN_STAR || current_token()->type == TOKEN_SLASH) {
         token_type_t op = current_token()->type;
         advance_token(); // Consume operator
@@ -343,6 +346,8 @@ static ASTNode* parse_term() {
 ASTNode* parse_math_expr() 
 {
     ASTNode* node = parse_term();
+    if(!node) return 0;
+
     while (current_token()->type == TOKEN_PLUS || current_token()->type == TOKEN_MINUS) {
         token_type_t op = current_token()->type;
         advance_token(); // Consume operator

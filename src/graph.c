@@ -56,7 +56,7 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 			asprintf(&label, "if");
 			agedge(g, root, render_node(g, node->data.if_statement.condition), 0, 1);
 			agedge(g, root, render_node(g, node->data.if_statement.then_branch), 0, 1);
-			agedge(g, root, render_node(g, node->data.if_statement.else_branch), 0, 1);
+			// agedge(g, root, render_node(g, node->data.if_statement.else_branch), 0, 1);
 			break;
 		case AST_WHILE:
 			agsafeset(root, "color", "red", "");

@@ -12,6 +12,12 @@ static void ensure_allocated(buf_writer_t* writer, size_t n)
 	}
 }
 
+static void bufindent(buf_writer_t* writer)
+{
+	for(int i = 0; i < writer->indent; i++)	
+		bufcpy(writer, "\t");
+}
+
 void bufcpy(buf_writer_t* writer, const char* string)
 {
 	size_t len = strlen(string);
@@ -23,6 +29,7 @@ void bufcpy(buf_writer_t* writer, const char* string)
 
 void bufncpy(buf_writer_t* writer, const char* string)
 {
+	bufindent(writer);
 	bufcpy(writer, string);
 	writer->buf[writer->cursor++] = '\n';
 }
