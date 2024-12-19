@@ -11,7 +11,8 @@ typedef enum AST_NODE_TYPE {
     AST_IF,
     AST_WHILE,
     AST_BLOCK,
-    AST_PROGRAM
+    AST_PROGRAM,
+    AST_BINARY
 } ast_node_type_t;
 
 typedef struct ASTNode {
@@ -50,6 +51,11 @@ typedef struct ASTNode {
             struct ASTNode** children;
             size_t child_count;
         } program;
+        struct {
+            struct ASTNode* left;
+            struct ASTNode* right;
+            token_type_t op;
+        } binary_op;
     } data;
 } ASTNode;
 

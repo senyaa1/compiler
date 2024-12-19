@@ -77,6 +77,12 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 		case AST_IDENTIFIER:
 			asprintf(&label, "ident: %s", node->data.identifier);
 			break;
+		case AST_BINARY:
+			asprintf(&label, "op: %d", node->data.binary_op.op);
+			agsafeset(root, "color", "red", "");
+			agedge(g, root, render_node(g, node->data.binary_op.left), 0, 1);
+			agedge(g, root, render_node(g, node->data.binary_op.right), 0, 1);
+			break;
 		default:
 			asprintf(&label, "unknown (%d)", node->type);
 			agsafeset(root, "color", "blue", "");

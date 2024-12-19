@@ -4,6 +4,8 @@
 #include "lexer.h"
 #include "parser.h"
 #include "graph.h"
+#include "buffer.h"
+#include "translator.h"
 #include "fs.h"
 
 /*	TODO:
@@ -23,6 +25,7 @@
  
 	*/
 
+const char* __asan_default_options() { return "detect_leaks=0"; }
 
 
 int main(int argc, char** argv)
@@ -31,8 +34,9 @@ int main(int argc, char** argv)
 	// size_t len = read_file(argv[1], &source_text);
 
 	// add expression support
-	// const character_t *input = "func f(x) {var y = 20 + 5; } func main(a, b, c) { var x = 40; }";
-	const character_t *input = "var x = 2 + 4";
+	const character_t *input = "func f(x) {var x = (4 + 2) * 2 / 1; } func main(a, b, c) { var x = 40; }";
+	// const character_t *input = "var x = 4 + 2; var y = x; func amogus(a) { var b = a; }";
+	// const character_t *input = "";
 
 	token_t* tokens = lex(input);
 	// ast_node_t* ast = parse(tokens);
@@ -68,6 +72,10 @@ int main(int argc, char** argv)
 
 	printf("Parsed program successfully.\n");
 
+	buf_writer_t asm_buf = translate(ast);
+
+	printf("COMPILATION RESULT: \n\n%s\n\n", asm_buf.buf);
+
 	//
 	// lexer_t* lexer = lex(source_text);
 	// 
@@ -77,5 +85,6 @@ int main(int argc, char** argv)
 	// free_lexer(lexer);
 	free_tokens(tokens);
 	free_ast(ast);
+	free(asm_buf.buf);
 	return 0;
 }
