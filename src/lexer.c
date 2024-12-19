@@ -102,7 +102,7 @@ static number_t read_number(lexer_t *lexer)
     return number;
 }
 
-#define TOKEN_STR(TOKEN, CHAR, STR)                 \
+#define TOKEN_CHAR(TOKEN, CHAR, STR)                 \
 if (c == CHAR)                                      \
 {                                                   \
     advance(lexer);                                 \
@@ -121,13 +121,19 @@ token_t next_token(lexer_t *lexer)
         return create_token(TOKEN_EOF);
     } 
 
-    TOKEN_STR(TOKEN_LPAREN, '(', "(")
-    TOKEN_STR(TOKEN_RPAREN, ')', ")")
-    TOKEN_STR(TOKEN_LBRACE, '{', "{")
-    TOKEN_STR(TOKEN_RBRACE, '}', "}")
-    TOKEN_STR(TOKEN_COMMA, ',', ",")
-    TOKEN_STR(TOKEN_SEMICOLON, ';', ";")
-    TOKEN_STR(TOKEN_ASSIGN, '=', "=")
+    TOKEN_CHAR(TOKEN_LPAREN, '(', "(")
+    TOKEN_CHAR(TOKEN_RPAREN, ')', ")")
+    TOKEN_CHAR(TOKEN_LBRACE, '{', "{")
+    TOKEN_CHAR(TOKEN_RBRACE, '}', "}")
+    TOKEN_CHAR(TOKEN_COMMA, ',', ",")
+    TOKEN_CHAR(TOKEN_SEMICOLON, ';', ";")
+    TOKEN_CHAR(TOKEN_ASSIGN, '=', "=")
+        
+    TOKEN_CHAR(TOKEN_PLUS, '+', "+")
+    TOKEN_CHAR(TOKEN_MINUS, '-', "-")
+    TOKEN_CHAR(TOKEN_STAR, '*', "*")
+    TOKEN_CHAR(TOKEN_SLASH, '/', "/")
+    TOKEN_CHAR(TOKEN_CARET, '^', "^")
 
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') 
     {

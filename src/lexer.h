@@ -20,7 +20,12 @@ typedef enum TOKEN_TYPES : uint8_t
     TOKEN_ASSIGN,
     TOKEN_KEYWORD,
     TOKEN_IDENTIFIER,
-    TOKEN_NUMBER
+    TOKEN_NUMBER,
+    TOKEN_PLUS,
+    TOKEN_MINUS,
+    TOKEN_STAR,
+    TOKEN_SLASH,
+    TOKEN_CARET
 } token_type_t;
 
 typedef union 

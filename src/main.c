@@ -9,6 +9,7 @@
 /*	TODO:
  *	frontend
  *		build ast
+ *		save as json
  *	middleend	// last 
  *		optimize math expressions
  *		forcefully differentiate all expressions
@@ -30,13 +31,14 @@ int main(int argc, char** argv)
 	// size_t len = read_file(argv[1], &source_text);
 
 	// add expression support
-	const character_t *input = "func f(x) {var y = 20 + 5; } func main(a, b, c) { var x = 40; }";
+	// const character_t *input = "func f(x) {var y = 20 + 5; } func main(a, b, c) { var x = 40; }";
+	const character_t *input = "var x = 2 + 4";
 
 	token_t* tokens = lex(input);
 	// ast_node_t* ast = parse(tokens);
 	//
 	// token_t example_tokens[] = {
-	// 	{TOKEN_KEYWORD, {.str = "func"}},
+	// 	{TOKEN_KEYWORD, {.str = ""}},
 	// 	{TOKEN_IDENTIFIER, {.str = "main"}},
 	// 	{TOKEN_LPAREN, {.str = NULL}},
 	// 	{TOKEN_RPAREN, {.str = NULL}},
