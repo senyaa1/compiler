@@ -1,6 +1,10 @@
 #pragma once
 
+#include <stdint.h>
+
 #include "lexer.h"
+
+static const int DEFAULT_INLINE_ASM_ALLOC = 128;
 
 typedef enum AST_NODE_TYPE {
     AST_NUMBER,
@@ -12,7 +16,10 @@ typedef enum AST_NODE_TYPE {
     AST_WHILE,
     AST_BLOCK,
     AST_PROGRAM,
-    AST_BINARY
+    AST_BINARY,
+    AST_FUNCTION_CALL,
+    AST_INLINE_ASM,
+    AST_RETURN,
 } ast_node_type_t;
 
 typedef struct ASTNode {
@@ -56,6 +63,15 @@ typedef struct ASTNode {
             struct ASTNode* right;
             token_type_t op;
         } binary_op;
+        struct {
+            struct ASTNode* name;     
+            struct ASTNode** arguments;
+            size_t arg_count;         
+        } function_call;
+
+        struct {
+            struct ASTNode* value;
+        } return_statement;
     } data;
 } ASTNode;
 

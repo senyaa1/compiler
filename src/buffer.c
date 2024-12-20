@@ -29,7 +29,12 @@ void bufcpy(buf_writer_t* writer, const char* string)
 
 void bufncpy(buf_writer_t* writer, const char* string)
 {
-	bufindent(writer);
 	bufcpy(writer, string);
 	writer->buf[writer->cursor++] = '\n';
+}
+
+void bufend(buf_writer_t* writer)
+{
+	writer->buf = (char*)realloc(writer->buf, (writer->cursor + 1) * sizeof(char));
+	writer->buf[writer->cursor] = '\x00';
 }

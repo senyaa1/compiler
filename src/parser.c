@@ -1,11 +1,16 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <jason/json.h>
+#include <jason/serializer.h>
+
 #include "lexer.h"
 #include "parser.h"
 #include "debugger.h"
+#include "buffer.h"
 
 static token_t* tokens;
 static size_t token_index;
@@ -17,6 +22,8 @@ static token_t* current_token() {
 static void advance_token() {
     token_index++;
 }
+
+ASTNode* parse_expression_priority();
 
 int expect_token(token_type_t type) {
     if (current_token()->type == type) {
@@ -53,22 +60,96 @@ ASTNode* parse_block() {
     expect_token(TOKEN_RBRACE);
     return block_node;
 }
+ASTNode* parse_function_call() {
+    printf("parsing function call!\n");
+    ASTNode* node = create_ast_node(AST_FUNCTION_CALL);
+
+    // Parse function name
+    node->data.function_call.name = create_ast_node(AST_IDENTIFIER);
+    node->data.function_call.name->data.identifier = strdup(current_token()->value.str);
+    expect_token(TOKEN_IDENTIFIER);
+
+    // Parse argument list
+    expect_token(TOKEN_LPAREN);
+    node->data.function_call.arguments = NULL;
+    node->data.function_call.arg_count = 0;
+
+    while (current_token()->type != TOKEN_RPAREN) {
+        ASTNode* arg = parse_expression();
+        node->data.function_call.arguments = realloc(
+            node->data.function_call.arguments,
+            sizeof(ASTNode*) * (node->data.function_call.arg_count + 1)
+        );
+        node->data.function_call.arguments[node->data.function_call.arg_count++] = arg;
+
+        if (current_token()->type == TOKEN_COMMA) {
+            advance_token();
+        } else {
+            break;
+        }
+    }
+
+    expect_token(TOKEN_RPAREN);
+    expect_token(TOKEN_SEMICOLON);
+    return node;
+}
+
+ASTNode* parse_asm()
+{
+    expect_token(TOKEN_KEYWORD); // asm
+    ASTNode* node = create_ast_node(AST_INLINE_ASM);
+
+    printf("parse asm\n");
+
+    buf_writer_t writer = { writer.buf = (char*)calloc(DEFAULT_INLINE_ASM_ALLOC, sizeof(char)), .buf_len = DEFAULT_INLINE_ASM_ALLOC};
+    node->data.identifier = writer.buf;
+
+    while(current_token()->type != TOKEN_SEMICOLON)
+    {
+        bufcpy(&writer, current_token()->value.str);
+        bufcpy(&writer, " ");
+        // printf("adding %s\n", current_token()->value.str);
+        advance_token();
+    }
+    writer.buf[writer.cursor] = '\x00';
+    
+    expect_token(TOKEN_SEMICOLON);
+    return node;
+}
+
+ASTNode* parse_return()
+{
+    expect_token(TOKEN_KEYWORD); // return
+    ASTNode* node = create_ast_node(AST_RETURN);
+
+    node->data.return_statement.value = 0;
+    if (current_token()->type != TOKEN_SEMICOLON) 
+       node->data.return_statement.value = parse_expression();
+
+    expect_token(TOKEN_SEMICOLON);
+    return node;
+}
+
 
 ASTNode* parse_statement() {
     if (current_token()->type == TOKEN_KEYWORD) {
-        if (strcmp(current_token()->value.str, "var") == 0) {
+        if (strcmp(current_token()->value.str, "var") == 0) 
             return parse_declaration();
-        } else if (strcmp(current_token()->value.str, "func") == 0) {
-            return parse_function();
-        } else if (strcmp(current_token()->value.str, "if") == 0) {
-            return parse_if();
-        } else if (strcmp(current_token()->value.str, "while") == 0) {
-            return parse_while();
-        } else if (strcmp(current_token()->value.str, "out") == 0) {
-            // return parse_();
-        }else if (strcmp(current_token()->value.str, "in") == 0) {
-            // return parse_while();
-        }
+
+        if (strcmp(current_token()->value.str, "func") == 0) 
+          return parse_function();
+
+        if (strcmp(current_token()->value.str, "if") == 0) 
+          return parse_if();
+
+        if (strcmp(current_token()->value.str, "while") == 0) 
+          return parse_while();
+
+        if (strcmp(current_token()->value.str, "asm") == 0) 
+          return parse_asm();
+
+        if (strcmp(current_token()->value.str, "return") == 0) 
+          return parse_return();
 
     }
 
@@ -83,7 +164,7 @@ ASTNode* parse_declaration() {
     node->data.declaration.identifier->data.identifier = strdup(current_token()->value.str);
     expect_token(TOKEN_IDENTIFIER);
 
-    if (current_token()->type == TOKEN_EQ) {
+    if (current_token()->type == TOKEN_ASSIGN) {
         advance_token();
         printf("parsing expression to init var\n");
         node->data.declaration.initializer = parse_expression();
@@ -93,6 +174,7 @@ ASTNode* parse_declaration() {
     }
 
     expect_token(TOKEN_SEMICOLON);
+    fprintf(stderr, "parsed declaration\n");
     return node;
 }
 
@@ -136,7 +218,7 @@ ASTNode* parse_if() {
 
     ASTNode* node = create_ast_node(AST_IF);
     expect_token(TOKEN_LPAREN);
-    node->data.if_statement.condition = parse_expression();
+    node->data.if_statement.condition = parse_expression_priority();
     expect_token(TOKEN_RPAREN);
 
     node->data.if_statement.then_branch = parse_block();
@@ -164,12 +246,12 @@ ASTNode* parse_while() {
 }
 
 ASTNode* parse_expression() {
-    if (current_token()->type == TOKEN_IDENTIFIER && tokens[token_index + 1].type == TOKEN_EQ) {
+    if (current_token()->type == TOKEN_IDENTIFIER && tokens[token_index + 1].type == TOKEN_ASSIGN) {
         printf("parsing assignment\n");
         return parse_assignment();
     }
-    return parse_math_expr();
-    // return parse_primary();
+
+    return parse_expression_priority();
 }
 
 ASTNode* parse_assignment() {
@@ -180,12 +262,13 @@ ASTNode* parse_assignment() {
     node->data.assignment.left->data.identifier = strdup(current_token()->value.str);
     expect_token(TOKEN_IDENTIFIER);
 
-    // Consume '='
-    expect_token(TOKEN_EQ);
+    expect_token(TOKEN_ASSIGN);
 
     // Parse right-hand side (expression)
-    node->data.assignment.right = parse_math_expr();
+    node->data.assignment.right = parse_expression_priority();
 
+    expect_token(TOKEN_SEMICOLON);
+    fprintf(stderr, "parsed assignment\n");
     return node;
 }
 ASTNode* parse_primary() 
@@ -196,6 +279,19 @@ ASTNode* parse_primary()
         advance_token();
         return node;
     } 
+
+    if (current_token()->type == TOKEN_IDENTIFIER) {
+        // Lookahead to check if this is a function call
+        if (tokens[token_index + 1].type == TOKEN_LPAREN) {
+            return parse_function_call();
+        }
+
+        ASTNode* node = create_ast_node(AST_IDENTIFIER);
+        node->data.identifier = strdup(current_token()->value.str);
+        advance_token();
+        return node;
+    }
+
     if (current_token()->type == TOKEN_IDENTIFIER) {
         ASTNode* node = create_ast_node(AST_IDENTIFIER);
         node->data.identifier = strdup(current_token()->value.str);
@@ -205,7 +301,7 @@ ASTNode* parse_primary()
 
     if (current_token()->type == TOKEN_LPAREN) {
         advance_token(); // Consume '('
-        ASTNode* expr = parse_math_expr();
+        ASTNode* expr = parse_expression_priority();
         if (current_token()->type != TOKEN_RPAREN) {
             fprintf(stderr, "Expected ')' after expression\n");
             return 0;
@@ -213,36 +309,15 @@ ASTNode* parse_primary()
         advance_token(); // Consume ')'
         return expr;
     } 
-        fprintf(stderr, "Unexpected token: %d\n", current_token()->type);
-            return 0;
-    //
-    // if (current_token()->type == TOKEN_NUMBER) {
-    //     ASTNode* node = create_ast_node(AST_NUMBER);
-    //     node->data.number = current_token()->value.number;
-    //     expect_token(TOKEN_NUMBER);
-    //     return node;
-    // } 
-    // 
-    // if (current_token()->type == TOKEN_IDENTIFIER) {
-    //     ASTNode* node = create_ast_node(AST_IDENTIFIER);
-    //     node->data.identifier = strdup(current_token()->value.str);
-    //     expect_token(TOKEN_IDENTIFIER);
-    //     return node;
-    // } 
-    //
-    // if (current_token()->type == TOKEN_PLUS) {
-    //     ASTNode* node = create_ast_node(AST_BINARY);
-    //     // node->data.identifier = strdup(current_token()->value.str);
-    //     expect_token(TOKEN_PLUS);
-    //     printf("PLUSSS\n");
-    //     return node;
-    // }
-    //
+
+    print_backtrace();
+
     fprintf(stderr, "Unexpected token in primary: Type=%d, Value=%s\n", 
                 current_token()->type, 
                 current_token()->type == TOKEN_KEYWORD || current_token()->type == TOKEN_IDENTIFIER
                 ? current_token()->value.str 
                 : "N/A");
+    exit(1);
     return 0;
 }
 // Utility for freeing the AST
@@ -329,31 +404,75 @@ static ASTNode* create_binary_op_node(ASTNode* left, token_type_t op, ASTNode* r
     return node;
 }
 
+#define PARSE(NAME, CONDITION, NEXT)                                                        \
+ASTNode* NAME() {                                                                           \
+    ASTNode* node = NEXT();                                                                 \
+    if(!node) return 0;                                                                     \
+    while (CONDITION) {                                                                     \
+        token_type_t op = current_token()->type;                                            \
+        advance_token();                                                                    \
+        ASTNode* right = NEXT();                                                            \
+        node = create_binary_op_node(node, op, right);                                      \
+    }                                                                                       \
+    return node;                                                                            \
+}                                                                                           \
 
-static ASTNode* parse_term() {
-    ASTNode* node = parse_primary();
-    if(!node) return 0;
 
-    while (current_token()->type == TOKEN_STAR || current_token()->type == TOKEN_SLASH) {
-        token_type_t op = current_token()->type;
-        advance_token(); // Consume operator
-        ASTNode* right = parse_primary();
-        node = create_binary_op_node(node, op, right);
-    }
-    return node;
-}
+PARSE(parse_term,       current_token()->type == TOKEN_STAR || current_token()->type == TOKEN_SLASH,    parse_primary)
 
-ASTNode* parse_math_expr() 
+PARSE(parse_math_expr,  current_token()->type == TOKEN_PLUS || current_token()->type == TOKEN_MINUS,    parse_term)
+
+PARSE(parse_logic_expr, current_token()->type == TOKEN_CARET || current_token()->type == TOKEN_AMPERSAND
+                        || current_token()->type == TOKEN_BAR,                                          parse_math_expr)
+
+PARSE(parse_expression_priority, current_token()->type == TOKEN_GREATER || current_token()->type == TOKEN_LESS 
+                        || current_token()->type == TOKEN_EQUALS,                                           parse_logic_expr)
+
+
+// static ASTNode* parse_term() {
+//     ASTNode* node = parse_primary();
+//     if(!node) return 0;
+//
+//     while (current_token()->type == TOKEN_STAR || current_token()->type == TOKEN_SLASH) {
+//         token_type_t op = current_token()->type;
+//         advance_token(); // Consume operator
+//         ASTNode* right = parse_primary();
+//         node = create_binary_op_node(node, op, right);
+//     }
+//     return node;
+// }
+//
+// ASTNode* parse_math_expr() 
+// {
+//     ASTNode* node = parse_term();
+//     if(!node) return 0;
+//
+//     while (current_token()->type == TOKEN_PLUS || current_token()->type == TOKEN_MINUS) {
+//         token_type_t op = current_token()->type;
+//         advance_token(); // Consume operator
+//         ASTNode* right = parse_term();
+//         node = create_binary_op_node(node, op, right);
+//     }
+//     return node;
+// }
+//
+// ASTNode* parse_logic_expr() 
+// {
+//     ASTNode* node = parse_math_expr();
+//     if(!node) return 0;
+//
+//     while (current_token()->type == TOKEN_GREATER || current_token()->type == TOKEN_LESS || current_token()->type == TOKEN_EQ) {
+//         token_type_t op = current_token()->type;
+//         advance_token(); // Consume operator
+//         ASTNode* right = parse_math_expr();
+//         node = create_binary_op_node(node, op, right);
+//     }
+//     return node;
+// }
+//
+
+
+
+void serialize_ast(ASTNode* ast)
 {
-    ASTNode* node = parse_term();
-    if(!node) return 0;
-
-    while (current_token()->type == TOKEN_PLUS || current_token()->type == TOKEN_MINUS) {
-        token_type_t op = current_token()->type;
-        advance_token(); // Consume operator
-        ASTNode* right = parse_term();
-        node = create_binary_op_node(node, op, right);
-    }
-    return node;
 }
-

@@ -12,3 +12,4 @@ typedef struct buf_writer
 
 void bufcpy(buf_writer_t* writer, const char* string);
 void bufncpy(buf_writer_t* writer, const char* string);
+void bufend(buf_writer_t* writer);

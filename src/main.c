@@ -6,6 +6,7 @@
 #include "graph.h"
 #include "buffer.h"
 #include "translator.h"
+#include "preprocessor.h"
 #include "fs.h"
 
 /*	TODO:
@@ -24,52 +25,30 @@
  
 	*/
 
+
+void assemble(const char* asm_path, const char* out_path)
+{
+	char* command = 0;
+	asprintf(&command, "./asm %s -o %s", asm_path, out_path);
+	system(command);
+	free(command);
+}
+
 const char* __asan_default_options() { return "detect_leaks=0"; }
 
 
 int main(int argc, char** argv)
 {
-	// char* source_text = 0;
+	char* source_text = 0;
 	// size_t len = read_file(argv[1], &source_text);
 
-	// add expression support
-	const character_t *input = "func f(x) {var x = (4 + 2) * 2 / 1; } func main(a, b, c) { var x = 40; }";
-	// const character_t *input = "if (x) { var y = 5 + 3; }";
-	// const character_t *input = "while (x) { var y = 5 + 3; }";
-	// const character_t *input = "var x = 5 + 3; var y = 2; var z = x + y;";
-	// const character_t *input = "var x = 5 + 3; x = x + 4;";
-	// const character_t *input = "2 - 5";
-	// const character_t *input = "var x = 4 + 2; var y = x; func amogus(a) { var b = a; }";
-	// const character_t *input = "";
+	if(preprocess(argv[1], &source_text))
+		goto exit;
 
-	token_t* tokens = lex(input);
-	// ast_node_t* ast = parse(tokens);
-	//
-	// token_t example_tokens[] = {
-	// 	{TOKEN_KEYWORD, {.str = ""}},
-	// 	{TOKEN_IDENTIFIER, {.str = "main"}},
-	// 	{TOKEN_LPAREN, {.str = NULL}},
-	// 	{TOKEN_RPAREN, {.str = NULL}},
-	// 	{TOKEN_LBRACE, {.str = NULL}},
-	// 	{TOKEN_KEYWORD, {.str = "var"}},
-	// 	{TOKEN_IDENTIFIER, {.str = "x"}},
-	// 	{TOKEN_ASSIGN, {.str = NULL}},
-	// 	{TOKEN_NUMBER, {.number = 10}},
-	// 	{TOKEN_SEMICOLON, {.str = NULL}},
-	// 	// {TOKEN_KEYWORD, {.str = "if"}},
-	// 	// {TOKEN_LPAREN, {.str = NULL}},
-	// 	// {TOKEN_IDENTIFIER, {.str = "x"}},
-	// 	// {TOKEN_RPAREN, {.str = NULL}},
-	// 	// {TOKEN_LBRACE, {.str = NULL}},
-	// 	// {TOKEN_IDENTIFIER, {.str = "x"}},
-	// 	// {TOKEN_ASSIGN, {.str = NULL}},
-	// 	// {TOKEN_NUMBER, {.number = 20}},
-	// 	// {TOKEN_SEMICOLON, {.str = NULL}},
-	// 	// {TOKEN_RBRACE, {.str = NULL}},
-	// 	{TOKEN_RBRACE, {.str = NULL}},
-	// 	{TOKEN_EOF, {.str = NULL}}
-	// };
-	//
+	printf("preprocessed text: %s\n", source_text);
+
+	token_t* tokens = lex(source_text);
+
 	ASTNode* ast = parse_program(tokens);
 
 	draw_ast(ast, "ast.png");
@@ -80,15 +59,14 @@ int main(int argc, char** argv)
 
 	printf("COMPILATION RESULT: \n\n%s\n\n", asm_buf.buf);
 
-	//
-	// lexer_t* lexer = lex(source_text);
-	// 
-	// 
+	write_file("out.s", asm_buf.buf, strlen(asm_buf.buf));
 
-	// free(source_text);
-	// free_lexer(lexer);
+	assemble("out.s", "a.out");
+
 	free_tokens(tokens);
 	free_ast(ast);
 	free(asm_buf.buf);
+exit:
+	free(source_text);
 	return 0;
 }

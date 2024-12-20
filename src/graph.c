@@ -32,6 +32,8 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 		case AST_ASSIGNMENT:
 			asprintf(&label, "=");
 			agsafeset(root, "color", "red", "");
+			agedge(g, root, render_node(g, node->data.assignment.left), 0, 1);
+			agedge(g, root, render_node(g, node->data.assignment.right), 0, 1);
 			break;
 		case AST_DECLARATION:
 			agsafeset(root, "color", "cyan", "");
@@ -42,7 +44,7 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 		case AST_FUNCTION:
 			agsafeset(root, "color", "cyan", "");
 			asprintf(&label, "function");
-			agedge(g, root, render_node(g, node->data.function.name), 0, 1);
+			agset(agedge(g, root, render_node(g, node->data.function.name), 0, 1), "color", "green");
 			for (size_t i = 0; i < node->data.function.param_count; ++i) 
 			{
 				Agedge_t* edge = agedge(g, root, render_node(g, node->data.function.parameters[i]), 0, 1);
@@ -50,6 +52,17 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 				agsafeset(edge, "label", "param", "");
 			}
 			agedge(g, root, render_node(g, node->data.function.body), 0, 1);
+			break;
+		case AST_FUNCTION_CALL:
+			agsafeset(root, "color", "cyan", "");
+			asprintf(&label, "call");
+			agset(agedge(g, root, render_node(g, node->data.function_call.name), 0, 1), "color", "green");
+			for (size_t i = 0; i < node->data.function_call.arg_count; ++i) 
+			{
+				Agedge_t* edge = agedge(g, root, render_node(g, node->data.function_call.arguments[i]), 0, 1);
+				agsafeset(edge, "color", "cyan", "");
+				agsafeset(edge, "label", "param", "");
+			}
 			break;
 		case AST_IF:
 			agsafeset(root, "color", "red", "");
@@ -83,6 +96,18 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 			agedge(g, root, render_node(g, node->data.binary_op.left), 0, 1);
 			agedge(g, root, render_node(g, node->data.binary_op.right), 0, 1);
 			break;
+		case AST_INLINE_ASM:
+			asprintf(&label, "inline asm: %s", node->data.identifier);
+			agsafeset(root, "color", "purple", "");
+			agsafeset(root, "label", label, "");
+			break;
+		case AST_RETURN:
+			asprintf(&label, "return");
+			agsafeset(root, "color", "cyan", "");
+			if(node->data.return_statement.value)
+				agedge(g, root, render_node(g, node->data.return_statement.value), 0, 1);
+			break;
+
 		default:
 			asprintf(&label, "unknown (%d)", node->type);
 			agsafeset(root, "color", "blue", "");

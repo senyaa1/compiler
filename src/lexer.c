@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -14,6 +15,8 @@
     KEYWORD(while)       \
     KEYWORD(out)       \
     KEYWORD(in)       \
+    KEYWORD(asm)       \
+    KEYWORD(return)       \
 
 
 
@@ -123,13 +126,28 @@ token_t next_token(lexer_t *lexer)
     TOKEN_CHAR(TOKEN_MINUS, '-', "-")
     TOKEN_CHAR(TOKEN_STAR, '*', "*")
     TOKEN_CHAR(TOKEN_SLASH, '/', "/")
-    TOKEN_CHAR(TOKEN_CARET, '^', "^")
 
     TOKEN_CHAR(TOKEN_GREATER, '>', ">")
     TOKEN_CHAR(TOKEN_LESS, '<', "<")
-    TOKEN_CHAR(TOKEN_EQ, '=', "=")
 
-    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') 
+    TOKEN_CHAR(TOKEN_CARET, '^', "^")
+    TOKEN_CHAR(TOKEN_AMPERSAND, '&', "&")
+    TOKEN_CHAR(TOKEN_BAR, '|', "|")
+
+    if(c == '=')
+    {
+        advance(lexer);
+        character_t next = current_char(lexer);
+        if(next == '=') 
+        {
+            advance(lexer);
+            return create_token_str(TOKEN_EQUALS, "==");
+        }
+
+        return create_token_str(TOKEN_ASSIGN, "=");
+    }
+
+    if (isalpha(c) || c == '_') 
     {
         character_t *identifier = read_identifier(lexer);
         if (is_keyword(identifier)) 

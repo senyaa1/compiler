@@ -27,7 +27,10 @@ typedef enum TOKEN_TYPES : uint8_t
     TOKEN_CARET,
     TOKEN_GREATER,
     TOKEN_LESS,
-    TOKEN_EQ,
+    TOKEN_EQUALS,
+    TOKEN_ASSIGN,
+    TOKEN_AMPERSAND,
+    TOKEN_BAR,
 } token_type_t;
 
 typedef union 

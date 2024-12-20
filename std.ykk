@@ -1,0 +1,12 @@
+func print(a)
+{
+	asm pop bx;
+	asm out bx;
+	asm ret;
+}
+
+func input()
+{
+	asm in;
+	return;
+}
