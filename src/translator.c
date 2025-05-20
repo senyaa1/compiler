@@ -410,3 +410,5 @@ buf_writer_t translate(ASTNode* ast)
 
 	return writer;
 }
+
+
