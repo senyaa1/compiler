@@ -1,4 +1,3 @@
-#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -6,19 +5,8 @@
 #include <wchar.h>
 #include <wctype.h>
 
+#include "buffer.h"
 #include "lexer.h"
-
-#define KEYWORDS                                                                                                       \
-	KEYWORD(var)                                                                                                   \
-	KEYWORD(func)                                                                                                  \
-	KEYWORD(if)                                                                                                    \
-	KEYWORD(else)                                                                                                  \
-	KEYWORD(while)                                                                                                 \
-	KEYWORD(out)                                                                                                   \
-	KEYWORD(in)                                                                                                    \
-	KEYWORD(asm)                                                                                                   \
-	KEYWORD(return)
-
 
 static token_t create_token(token_type_t type)
 {
@@ -37,7 +25,7 @@ static token_t create_token_num(token_type_t type, number_t num)
 
 static character_t current_char(lexer_t *lexer)
 {
-	return lexer->pos < lexer->length ? lexer->input[lexer->pos] : '\0';
+	return lexer->pos < lexer->length ? lexer->input[lexer->pos] : L'\0';
 }
 
 static void advance(lexer_t *lexer)
@@ -54,8 +42,6 @@ static void skip_whitespace(lexer_t *lexer)
 
 static bool is_keyword(character_t *identifier)
 {
-#define WIDEN(X) L##X
-
 #define KEYWORD(WORD) wcscmp(identifier, WIDEN(#WORD)) == 0 ||
 	return KEYWORDS 0;
 #undef KEYWORD
@@ -159,6 +145,65 @@ token_t next_token(lexer_t *lexer)
 
 	if (iswdigit(c))
 		return create_token_num(TOKEN_NUMBER, read_number(lexer));
+
+
+	if (c == L'\"')
+	{
+		advance(lexer);
+
+		buf_writer_t writer = {.buf = calloc(64, sizeof(wchar_t)), .buf_len = 64, .cursor = 0};
+
+		for (;;)
+		{
+			if (lexer->pos >= lexer->length)
+			{
+				fprintf(stderr, "error: unterminated string literal\n");
+				exit(1);
+			}
+
+
+			wchar_t ch = current_char(lexer);
+
+			if (ch == L'\"')
+			{
+				advance(lexer);
+				break;
+			}
+
+			if (ch == L'\\')
+			{
+				advance(lexer);
+				wchar_t ch = current_char(lexer);
+				switch (ch)
+				{
+					case L'n':
+						ch = L'\n';
+						break;
+					case L't':
+						ch = L'\t';
+						break;
+					case L'r':
+						ch = L'\r';
+						break;
+					case L'\\':
+					case L'\"':
+						break;
+					default:
+						fprintf(stderr, "unknown escape sequence\n");
+						exit(1);
+						break;
+				}
+			}
+
+			advance(lexer);
+
+			bufccpy(&writer, ch);
+		}
+
+		bufend(&writer);
+		printf("lexed string \"%ls\"\n", writer.buf);
+		return (token_t){.type = TOKEN_STRING, .value.str = writer.buf};
+	}
 
 	fprintf(stderr, "Unexpected character: %c\n", c);
 	return create_token(TOKEN_EOF);

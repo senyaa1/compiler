@@ -12,7 +12,12 @@
 #include "preprocessor.h"
 #include "translator.h"
 
-// const char* __asan_default_options() { return "detect_leaks=0"; }
+/* TODO:
+ * FIX error handling (don't exit e.t.c.)
+ *
+ */
+
+const char* __asan_default_options() { return "detect_leaks=0"; }
 
 int main(int argc, char **argv)
 {
@@ -38,18 +43,18 @@ int main(int argc, char **argv)
 	draw_ast(ast, "ast.png");
 
 	printf("Parsed program successfully.\n");
-
-	buf_writer_t asm_buf = translate(ast);
-
-	printf("COMPILATION RESULT: \n\n%s\n\n", asm_buf.buf);
-
-	write_file("out.s", asm_buf.buf, strlen(asm_buf.buf));
-
+	//
+	// buf_writer_t asm_buf = translate(ast);
+	//
+	// printf("COMPILATION RESULT: \n\n%s\n\n", asm_buf.buf);
+	//
+	// write_file("out.s", asm_buf.buf, strlen(asm_buf.buf));
+	//
 	// assemble("out.s", "a.out");
+	// free(asm_buf.buf);
 
 	free_tokens(tokens);
 	free_ast(ast);
-	free(asm_buf.buf);
 exit:
 	free(source_text);
 	return 0;

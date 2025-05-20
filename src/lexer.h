@@ -4,6 +4,20 @@
 #include <stdlib.h>
 #include <wchar.h>
 
+#define KEYWORDS                                                                                                       \
+	KEYWORD(int)                                                                                                   \
+	KEYWORD(func)                                                                                                  \
+	KEYWORD(if)                                                                                                    \
+	KEYWORD(else)                                                                                                  \
+	KEYWORD(while)                                                                                                 \
+	KEYWORD(asm)                                                                                                   \
+	KEYWORD(return)                                                                                                \
+	KEYWORD(for)
+	// KEYWORD(out)                                                                                                   \
+	// KEYWORD(in)                                                                                                    \
+
+#define WIDEN(X) L##X
+
 static const size_t INITIAL_TOKEN_ALLOC = 128;
 
 typedef int64_t number_t;
@@ -32,6 +46,7 @@ typedef enum TOKEN_TYPES : uint8_t
 	TOKEN_ASSIGN,
 	TOKEN_AMPERSAND,
 	TOKEN_BAR,
+	TOKEN_STRING
 } token_type_t;
 
 typedef union {

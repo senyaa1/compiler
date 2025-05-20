@@ -6,9 +6,9 @@
 #include "graph.h"
 #include "parser.h"
 
-static Agnode_t* create_node(Agraph_t* g)
+static Agnode_t *create_node(Agraph_t *g)
 {
-	Agnode_t* node = agnode(g, 0, 1);
+	Agnode_t *node = agnode(g, 0, 1);
 	agsafeset(node, "color", "white", "");
 	agsafeset(node, "style", "rounded", "");
 	agsafeset(node, "shape", "rect", "");
@@ -17,13 +17,14 @@ static Agnode_t* create_node(Agraph_t* g)
 	return node;
 }
 
-static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
+static Agnode_t *render_node(Agraph_t *g, ASTNode *node)
 {
-	if(!node) return 0;
-	Agnode_t* root = create_node(g);
+	if (!node)
+		return 0;
+	Agnode_t *root = create_node(g);
 
-	char* label = 0;
-	switch(node->type)
+	char *label = 0;
+	switch (node->type)
 	{
 		case AST_NUMBER:
 			asprintf(&label, "%ld", node->data.number);
@@ -39,15 +40,17 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 			agsafeset(root, "color", "cyan", "");
 			asprintf(&label, "vardecl");
 			agedge(g, root, render_node(g, node->data.declaration.identifier), 0, 1);
-			agedge(g, root, render_node(g, node->data.declaration.initializer), 0, 1);
+			if (node->data.declaration.initializer)
+				agedge(g, root, render_node(g, node->data.declaration.initializer), 0, 1);
 			break;
 		case AST_FUNCTION:
 			agsafeset(root, "color", "cyan", "");
 			asprintf(&label, "function");
 			agset(agedge(g, root, render_node(g, node->data.function.name), 0, 1), "color", "green");
-			for (size_t i = 0; i < node->data.function.param_count; ++i) 
+			for (size_t i = 0; i < node->data.function.param_count; ++i)
 			{
-				Agedge_t* edge = agedge(g, root, render_node(g, node->data.function.parameters[i]), 0, 1);
+				Agedge_t *edge =
+				    agedge(g, root, render_node(g, node->data.function.parameters[i]), 0, 1);
 				agsafeset(edge, "color", "cyan", "");
 				agsafeset(edge, "label", "param", "");
 			}
@@ -57,9 +60,10 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 			agsafeset(root, "color", "cyan", "");
 			asprintf(&label, "call");
 			agset(agedge(g, root, render_node(g, node->data.function_call.name), 0, 1), "color", "green");
-			for (size_t i = 0; i < node->data.function_call.arg_count; ++i) 
+			for (size_t i = 0; i < node->data.function_call.arg_count; ++i)
 			{
-				Agedge_t* edge = agedge(g, root, render_node(g, node->data.function_call.arguments[i]), 0, 1);
+				Agedge_t *edge =
+				    agedge(g, root, render_node(g, node->data.function_call.arguments[i]), 0, 1);
 				agsafeset(edge, "color", "cyan", "");
 				agsafeset(edge, "label", "param", "");
 			}
@@ -79,12 +83,12 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 			break;
 		case AST_BLOCK:
 			asprintf(&label, "block");
-			for (size_t i = 0; i < node->data.block.child_count; ++i) 
+			for (size_t i = 0; i < node->data.block.child_count; ++i)
 				agedge(g, root, render_node(g, node->data.block.children[i]), 0, 1);
 			break;
 		case AST_PROGRAM:
 			asprintf(&label, "program");
-			for (size_t i = 0; i < node->data.program.child_count; ++i) 
+			for (size_t i = 0; i < node->data.program.child_count; ++i)
 				agedge(g, root, render_node(g, node->data.program.children[i]), 0, 1);
 			break;
 		case AST_IDENTIFIER:
@@ -97,15 +101,27 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 			agedge(g, root, render_node(g, node->data.binary_op.right), 0, 1);
 			break;
 		case AST_INLINE_ASM:
-			asprintf(&label, "inline asm: %s", node->data.identifier);
+			asprintf(&label, "inline asm: %ls", node->data.identifier);
 			agsafeset(root, "color", "purple", "");
 			agsafeset(root, "label", label, "");
 			break;
 		case AST_RETURN:
 			asprintf(&label, "return");
 			agsafeset(root, "color", "cyan", "");
-			if(node->data.return_statement.value)
+			if (node->data.return_statement.value)
 				agedge(g, root, render_node(g, node->data.return_statement.value), 0, 1);
+			break;
+		case AST_FOR:
+			agsafeset(root, "color", "purple", "");
+			asprintf(&label, "for");
+			agedge(g, root, render_node(g, node->data.for_statement.initializer), 0, 1);
+			agedge(g, root, render_node(g, node->data.for_statement.condition), 0, 1);
+			agedge(g, root, render_node(g, node->data.for_statement.iterator), 0, 1);
+			agedge(g, root, render_node(g, node->data.for_statement.body), 0, 1);
+			break;
+		case AST_STRING:
+			agsafeset(root, "color", "green", "");
+			asprintf(&label, "string: \"%ls\"", node->data.string.value);
 			break;
 
 		default:
@@ -134,7 +150,7 @@ static Agnode_t* render_node(Agraph_t* g, ASTNode* node)
 }
 
 
-void draw_ast(ASTNode* ast, const char* output_filename)
+void draw_ast(ASTNode *ast, const char *output_filename)
 {
 	GVC_t *gvc = gvContext();
 
