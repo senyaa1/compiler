@@ -1,219 +1,221 @@
 #include <ctype.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <wchar.h>
+#include <wctype.h>
 
 #include "lexer.h"
 
-#define KEYWORDS        \
-    KEYWORD(var)        \
-    KEYWORD(func)       \
-    KEYWORD(if)         \
-    KEYWORD(else)       \
-    KEYWORD(while)       \
-    KEYWORD(out)       \
-    KEYWORD(in)       \
-    KEYWORD(asm)       \
-    KEYWORD(return)       \
-
+#define KEYWORDS                                                                                                       \
+	KEYWORD(var)                                                                                                   \
+	KEYWORD(func)                                                                                                  \
+	KEYWORD(if)                                                                                                    \
+	KEYWORD(else)                                                                                                  \
+	KEYWORD(while)                                                                                                 \
+	KEYWORD(out)                                                                                                   \
+	KEYWORD(in)                                                                                                    \
+	KEYWORD(asm)                                                                                                   \
+	KEYWORD(return)
 
 
 static token_t create_token(token_type_t type)
 {
-    return (token_t){.type = type, .value = 0};
+	return (token_t){.type = type, .value = 0};
 }
 
-static token_t create_token_str(token_type_t type, const character_t* str) 
+static token_t create_token_str(token_type_t type, const character_t *str)
 {
-    return (token_t){.type = type, .value = (token_value_t){.str = strdup(str)}};
+	return (token_t){.type = type, .value = (token_value_t){.str = wcsdup(str)}};
 }
 
-static token_t create_token_num(token_type_t type, number_t num) 
+static token_t create_token_num(token_type_t type, number_t num)
 {
-    return (token_t){.type = type, .value = (token_value_t){.number = num}};
+	return (token_t){.type = type, .value = (token_value_t){.number = num}};
 }
 
-static character_t current_char(lexer_t *lexer) 
+static character_t current_char(lexer_t *lexer)
 {
-    return lexer->pos < lexer->length ? lexer->input[lexer->pos] : '\0';
+	return lexer->pos < lexer->length ? lexer->input[lexer->pos] : '\0';
 }
 
-static void advance(lexer_t *lexer) 
+static void advance(lexer_t *lexer)
 {
-    lexer->pos++;
+	lexer->pos++;
 }
 
-static void skip_whitespace(lexer_t *lexer) 
+static void skip_whitespace(lexer_t *lexer)
 {
-    while (current_char(lexer) == ' ' || current_char(lexer) == '\n' || current_char(lexer) == '\t' || current_char(lexer) == '\r') 
-        advance(lexer);
+	while (current_char(lexer) == L' ' || current_char(lexer) == L'\n' || current_char(lexer) == L'\t' ||
+	       current_char(lexer) == L'\r')
+		advance(lexer);
 }
 
-static bool is_keyword(character_t* identifier)
+static bool is_keyword(character_t *identifier)
 {
-    #define KEYWORD(WORD)   strcmp(identifier, #WORD) == 0 ||
+#define WIDEN(X) L##X
 
-    return KEYWORDS 0;
-
-    #undef KEYWORD
+#define KEYWORD(WORD) wcscmp(identifier, WIDEN(#WORD)) == 0 ||
+	return KEYWORDS 0;
+#undef KEYWORD
 }
 
-
-static character_t *read_identifier(lexer_t *lexer) 
+static character_t *read_identifier(lexer_t *lexer)
 {
-    size_t start = lexer->pos;
-    while ((current_char(lexer) >= 'a' && current_char(lexer) <= 'z') ||
-        (current_char(lexer) >= 'A' && current_char(lexer) <= 'Z') ||
-        (current_char(lexer) >= '0' && current_char(lexer) <= '9') ||
-        current_char(lexer) == '_') {
-        advance(lexer);
-    }
+	size_t start = lexer->pos;
+	while ((iswalnum(current_char(lexer)) || current_char(lexer) == L'_'))
+		advance(lexer);
 
-    int length = lexer->pos - start;
-    character_t *identifier = (character_t *)calloc(length + 1, sizeof(character_t));
-    strncpy(identifier, lexer->input + start, length);
-    identifier[length] = '\0';
+	int length = lexer->pos - start;
+	character_t *identifier = (character_t *)calloc(length + 1, sizeof(character_t));
+	wcsncpy(identifier, lexer->input + start, length);
+	identifier[length] = L'\0';
 
-    return identifier;
+	return identifier;
 }
 
-static number_t read_number(lexer_t *lexer) 
+static number_t read_number(lexer_t *lexer)
 {
-    static character_t num_buf[128] = { 0 };
+	static character_t num_buf[128] = {0};
 
-    size_t start = lexer->pos;
-    while (current_char(lexer) >= '0' && current_char(lexer) <= '9') 
-        advance(lexer);
+	size_t start = lexer->pos;
+	while (iswdigit(current_char(lexer)))
+		advance(lexer);
 
-    size_t length = lexer->pos - start;
-    strncpy(num_buf, lexer->input + start, length);
-    num_buf[length] = '\0';
+	size_t length = lexer->pos - start;
+	wcsncpy(num_buf, lexer->input + start, length);
+	num_buf[length] = '\0';
 
-    character_t* end = 0;
-    number_t number = strtod(num_buf, &end);
-    return number;
+	character_t *end = 0;
+	number_t number = wcstod(num_buf, &end);
+	return number;
 }
 
-#define TOKEN_CHAR(TOKEN, CHAR, STR)                 \
-if (c == CHAR)                                      \
-{                                                   \
-    advance(lexer);                                 \
-    return create_token_str(TOKEN, STR);            \
-}                                                   \
+#define TOKEN_CHAR(TOKEN, CHAR, STR)                                                                                   \
+	if (c == CHAR)                                                                                                 \
+	{                                                                                                              \
+		advance(lexer);                                                                                        \
+		return create_token_str(TOKEN, STR);                                                                   \
+	}
 
 
-token_t next_token(lexer_t *lexer) 
+token_t next_token(lexer_t *lexer)
 {
-    skip_whitespace(lexer);
-    character_t c = current_char(lexer);
+	skip_whitespace(lexer);
+	character_t c = current_char(lexer);
 
-    if (c == '\0') 
-    {
-        lexer->pos++; 
-        return create_token(TOKEN_EOF);
-    } 
+	if (c == L'\0')
+	{
+		lexer->pos++;
+		return create_token(TOKEN_EOF);
+	}
 
-    TOKEN_CHAR(TOKEN_LPAREN, '(', "(")
-    TOKEN_CHAR(TOKEN_RPAREN, ')', ")")
-    TOKEN_CHAR(TOKEN_LBRACE, '{', "{")
-    TOKEN_CHAR(TOKEN_RBRACE, '}', "}")
-    TOKEN_CHAR(TOKEN_COMMA, ',', ",")
-    TOKEN_CHAR(TOKEN_SEMICOLON, ';', ";")
-        
-    TOKEN_CHAR(TOKEN_PLUS, '+', "+")
-    TOKEN_CHAR(TOKEN_MINUS, '-', "-")
-    TOKEN_CHAR(TOKEN_STAR, '*', "*")
-    TOKEN_CHAR(TOKEN_SLASH, '/', "/")
+	TOKEN_CHAR(TOKEN_LPAREN, L'(', L"(")
+	TOKEN_CHAR(TOKEN_RPAREN, L')', L")")
+	TOKEN_CHAR(TOKEN_LBRACE, L'{', L"{")
+	TOKEN_CHAR(TOKEN_RBRACE, L'}', L"}")
+	TOKEN_CHAR(TOKEN_COMMA, L',', L",")
+	TOKEN_CHAR(TOKEN_SEMICOLON, L';', L";")
 
-    TOKEN_CHAR(TOKEN_GREATER, '>', ">")
-    TOKEN_CHAR(TOKEN_LESS, '<', "<")
+	TOKEN_CHAR(TOKEN_PLUS, L'+', L"+")
+	TOKEN_CHAR(TOKEN_MINUS, L'-', L"-")
+	TOKEN_CHAR(TOKEN_STAR, L'*', L"*")
+	TOKEN_CHAR(TOKEN_SLASH, L'/', L"/")
 
-    TOKEN_CHAR(TOKEN_CARET, '^', "^")
-    TOKEN_CHAR(TOKEN_AMPERSAND, '&', "&")
-    TOKEN_CHAR(TOKEN_BAR, '|', "|")
+	TOKEN_CHAR(TOKEN_GREATER, L'>', L">")
+	TOKEN_CHAR(TOKEN_LESS, L'<', L"<")
 
-    if(c == '=')
-    {
-        advance(lexer);
-        character_t next = current_char(lexer);
-        if(next == '=') 
-        {
-            advance(lexer);
-            return create_token_str(TOKEN_EQUALS, "==");
-        }
+	TOKEN_CHAR(TOKEN_CARET, L'^', L"^")
+	TOKEN_CHAR(TOKEN_AMPERSAND, L'&', L"&")
+	TOKEN_CHAR(TOKEN_BAR, L'|', L"|")
 
-        return create_token_str(TOKEN_ASSIGN, "=");
-    }
+	if (c == L'=')
+	{
+		advance(lexer);
+		character_t next = current_char(lexer);
+		if (next == L'=')
+		{
+			advance(lexer);
+			return create_token_str(TOKEN_EQUALS, L"==");
+		}
 
-    if (isalpha(c) || c == '_') 
-    {
-        character_t *identifier = read_identifier(lexer);
-        if (is_keyword(identifier)) 
-            return create_token_str(TOKEN_KEYWORD, identifier);
+		return create_token_str(TOKEN_ASSIGN, L"=");
+	}
 
-        return create_token_str(TOKEN_IDENTIFIER, identifier);
-    } 
+	if (iswalpha(c) || c == L'_')
+	{
+		character_t *identifier = read_identifier(lexer);
 
-    if (c >= '0' && c <= '9') 
-        return create_token_num(TOKEN_NUMBER, read_number(lexer));
+		token_t tok = {};
+		if (is_keyword(identifier))
+			tok = create_token_str(TOKEN_KEYWORD, identifier);
+		else
+			tok = create_token_str(TOKEN_IDENTIFIER, identifier);
 
-    fprintf(stderr, "Unexpected character: %c\n", c);
-    return create_token(TOKEN_EOF);
+		free(identifier);
+		return tok;
+	}
+
+	if (iswdigit(c))
+		return create_token_num(TOKEN_NUMBER, read_number(lexer));
+
+	fprintf(stderr, "Unexpected character: %c\n", c);
+	return create_token(TOKEN_EOF);
 }
 
 void print_token(token_t token)
 {
-    printf("Token (%d): ", token.type);
-    
-    if(token.type == TOKEN_NUMBER)
-    {
-        printf("%ld\n", token.value.number);
-        return;
-    }
+	printf("Token (%d): ", token.type);
 
-    if(token.value.str) printf("%s\n", token.value.str);
+	if (token.type == TOKEN_NUMBER)
+	{
+		printf("%ld\n", token.value.number);
+		return;
+	}
+
+	if (token.value.str)
+		printf("%ls\n", token.value.str);
 }
 
 void free_token(token_t token)
 {
-    if(token.value.str && token.type != TOKEN_NUMBER)
-        free(token.value.str);
+	if (token.value.str && token.type != TOKEN_NUMBER)
+		free(token.value.str);
 }
 
-void free_tokens(token_t* tokens)
+void free_tokens(token_t *tokens)
 {
-        size_t i = 0;
-	do 
-        {
+	size_t i = 0;
+	do
+	{
 		free_token(tokens[i]);
-                i++;
+		i++;
 	} while (tokens[i - 1].type != TOKEN_EOF);
 
-        free(tokens);
+	free(tokens);
 }
 
-token_t* lex(const char* text)
+token_t *lex(const wchar_t *text)
 {
-    lexer_t lexer = (lexer_t){text, 0, strlen(text)};
+	lexer_t lexer = (lexer_t){text, 0, wcslen(text)};
 
-    size_t allocated = INITIAL_TOKEN_ALLOC, i = 0;
-    token_t* tokens = (token_t*)calloc(allocated * sizeof(token_t), sizeof(token_t));
+	size_t allocated = INITIAL_TOKEN_ALLOC, i = 0;
+	token_t *tokens = (token_t *)calloc(allocated * sizeof(token_t), sizeof(token_t));
 
-    do 
-    {
-        tokens[i] = next_token(&lexer);
-        print_token(tokens[i]);
-        i++;
-        if(i >= allocated)
-        {
-            allocated *= 2;
-            tokens = realloc(tokens, allocated * sizeof(token_t));
-        }
-    } while (tokens[i - 1].type != TOKEN_EOF);
+	do
+	{
+		tokens[i] = next_token(&lexer);
+		print_token(tokens[i]);
+		i++;
+		if (i >= allocated)
+		{
+			allocated *= 2;
+			tokens = realloc(tokens, allocated * sizeof(token_t));
+		}
+	} while (tokens[i - 1].type != TOKEN_EOF);
 
-    tokens = realloc(tokens, i * sizeof(token_t));
+	tokens = realloc(tokens, i * sizeof(token_t));
 
-    return tokens;
+	return tokens;
 }
