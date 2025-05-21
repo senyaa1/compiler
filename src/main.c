@@ -13,8 +13,8 @@
 #include "translator.h"
 
 /* TODO:
+ * FIX memory leaks
  * FIX error handling (don't exit e.t.c.)
- *
  */
 
 const char* __asan_default_options() { return "detect_leaks=0"; }
@@ -40,13 +40,13 @@ int main(int argc, char **argv)
 
 	ASTNode *ast = parse_program(tokens);
 
-	draw_ast(ast, "ast.png");
+	// draw_ast(ast, "ast.png");
 
 	printf("Parsed program successfully.\n");
 	//
-	// buf_writer_t asm_buf = translate(ast);
+	buf_writer_t asm_buf = translate(ast);
 	//
-	// printf("COMPILATION RESULT: \n\n%s\n\n", asm_buf.buf);
+	printf("COMPILATION RESULT: \n\n%ls\n\n", asm_buf.buf);
 	//
 	// write_file("out.s", asm_buf.buf, strlen(asm_buf.buf));
 	//

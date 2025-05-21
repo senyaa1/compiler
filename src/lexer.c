@@ -151,7 +151,7 @@ token_t next_token(lexer_t *lexer)
 	{
 		advance(lexer);
 
-		buf_writer_t writer = {.buf = calloc(64, sizeof(wchar_t)), .buf_len = 64, .cursor = 0};
+		buf_writer_t writer = {.buf = calloc(64, sizeof(character_t)), .buf_len = 64, .cursor = 0};
 
 		for (;;)
 		{
@@ -162,7 +162,7 @@ token_t next_token(lexer_t *lexer)
 			}
 
 
-			wchar_t ch = current_char(lexer);
+			character_t ch = current_char(lexer);
 
 			if (ch == L'\"')
 			{
@@ -173,7 +173,7 @@ token_t next_token(lexer_t *lexer)
 			if (ch == L'\\')
 			{
 				advance(lexer);
-				wchar_t ch = current_char(lexer);
+				character_t ch = current_char(lexer);
 				switch (ch)
 				{
 					case L'n':
@@ -241,7 +241,7 @@ void free_tokens(token_t *tokens)
 	free(tokens);
 }
 
-token_t *lex(const wchar_t *text)
+token_t *lex(const character_t *text)
 {
 	lexer_t lexer = (lexer_t){text, 0, wcslen(text)};
 
