@@ -25,7 +25,9 @@ typedef enum AST_NODE_TYPE
 	AST_STRING,
 } ast_node_type_t;
 
-typedef struct ASTNode
+typedef struct ast_node ast_node_t;
+
+struct ast_node
 {
 	ast_node_type_t type;
 	union {
@@ -33,82 +35,82 @@ typedef struct ASTNode
 		character_t *identifier;
 		struct
 		{
-			struct ASTNode *left;
-			struct ASTNode *right;
+			ast_node_t *left;
+			ast_node_t *right;
 		} assignment;
 		struct
 		{
-			struct ASTNode *identifier;
-			struct ASTNode *initializer;
+			ast_node_t *identifier;
+			ast_node_t *initializer;
 		} declaration;
 		struct
 		{
-			struct ASTNode *condition;
-			struct ASTNode *then_branch;
-			struct ASTNode *else_branch;
+			ast_node_t *condition;
+			ast_node_t *then_branch;
+			ast_node_t *else_branch;
 		} if_statement;
 		struct
 		{
-			struct ASTNode *condition;
-			struct ASTNode *body;
+			ast_node_t *condition;
+			ast_node_t *body;
 		} while_statement;
 		struct
 		{
-			struct ASTNode *initializer;
-			struct ASTNode *condition;
-			struct ASTNode *iterator;
-			struct ASTNode *body;
+			ast_node_t *initializer;
+			ast_node_t *condition;
+			ast_node_t *iterator;
+			ast_node_t *body;
 		} for_statement;
 		struct
 		{
-			struct ASTNode *name;
-			struct ASTNode **parameters;
+			ast_node_t *name;
+			ast_node_t **parameters;
 			size_t param_count;
-			struct ASTNode *body;
+			ast_node_t *body;
 		} function;
 		struct
 		{
-			struct ASTNode **children;
+			ast_node_t **children;
 			size_t child_count;
 		} block;
 		struct
 		{
-			struct ASTNode **children;
+			ast_node_t **children;
 			size_t child_count;
 		} program;
 		struct
 		{
-			struct ASTNode *left;
-			struct ASTNode *right;
+			ast_node_t *left;
+			ast_node_t *right;
 			token_type_t op;
 		} binary_op;
 		struct
 		{
-			struct ASTNode *name;
-			struct ASTNode **arguments;
+			ast_node_t *name;
+			ast_node_t **arguments;
 			size_t arg_count;
 		} function_call;
 		struct
 		{
-			struct ASTNode *value;
+			ast_node_t *value;
 		} return_statement;
 		struct
 		{
 			character_t *value;
 		} string;
 	} data;
-} ASTNode;
+};
 
 
-ASTNode *parse_block();
-ASTNode *parse_statement();
-ASTNode *parse_expression();
-ASTNode *parse_assignment();
-ASTNode *parse_declaration();
-ASTNode *parse_function();
-ASTNode *parse_if();
-ASTNode *parse_while();
-ASTNode *parse_primary();
-ASTNode *parse_math_expr();
-ASTNode *parse_program(token_t *tokens);
-void free_ast(ASTNode *node);
+ast_node_t *parse_block();
+ast_node_t *parse_statement();
+ast_node_t *parse_expression();
+ast_node_t *parse_assignment();
+ast_node_t *parse_declaration();
+ast_node_t *parse_function();
+ast_node_t *parse_if();
+ast_node_t *parse_while();
+ast_node_t *parse_primary();
+ast_node_t *parse_math_expr();
+ast_node_t *parse_program(token_t *tokens);
+void free_ast(ast_node_t *node);

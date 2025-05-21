@@ -45,7 +45,7 @@ size_t read_file(const char *filepath, wchar_t **content)
 
 	size_t wlen = mbstowcs(NULL, fileptr, 0);
 	if (wlen == -1)
-	{ 
+	{
 		// free(fileptr);
 		munmap(fileptr, sz);
 		close(fd);
@@ -60,11 +60,11 @@ size_t read_file(const char *filepath, wchar_t **content)
 	munmap(fileptr, sz);
 	close(fd);
 
-	return wlen; 
+	return wlen;
 }
 
 
-int write_file(const char *filepath, char *content, size_t size)
+int write_file(const char *filepath, wchar_t *content, size_t size)
 {
 	FILE *file = fopen(filepath, "wb");
 
@@ -74,16 +74,12 @@ int write_file(const char *filepath, char *content, size_t size)
 		return -1;
 	}
 
-	size_t bytes_written = fwrite(content, 1, size, file);
-
-	if (bytes_written != size)
+	if (fputws(content, file) == WEOF)
 	{
-		fprintf(stderr, "Error writing to file %s\n", filepath);
 		fclose(file);
-		return -1;
+		return 1;
 	}
 
 	fclose(file);
-
 	return 0;
 }

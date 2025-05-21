@@ -28,7 +28,7 @@ static void advance_token()
 	token_index++;
 }
 
-ASTNode *parse_expression_priority();
+ast_node_t *parse_expression_priority();
 
 int expect_token(token_type_t type)
 {
@@ -43,35 +43,35 @@ int expect_token(token_type_t type)
 	return 0;
 }
 
-ASTNode *create_ast_node(ast_node_type_t type)
+ast_node_t *create_ast_node(ast_node_type_t type)
 {
-	ASTNode *node = (ASTNode *)calloc(1, sizeof(ASTNode));
+	ast_node_t *node = (ast_node_t *)calloc(1, sizeof(ast_node_t));
 	node->type = type;
 	return node;
 }
 
-ASTNode *parse_block()
+ast_node_t *parse_block()
 {
 	expect_token(TOKEN_LBRACE);
-	ASTNode *block_node = create_ast_node(AST_BLOCK);
+	ast_node_t *block_node = create_ast_node(AST_BLOCK);
 	block_node->data.block.children = NULL;
 	block_node->data.block.child_count = 0;
 
 	while (current_token()->type != TOKEN_RBRACE)
 	{
-		ASTNode *stmt = parse_statement();
+		ast_node_t *stmt = parse_statement();
 		block_node->data.block.children = realloc(block_node->data.block.children,
-							  sizeof(ASTNode *) * (block_node->data.block.child_count + 1));
+							  sizeof(ast_node_t *) * (block_node->data.block.child_count + 1));
 		block_node->data.block.children[block_node->data.block.child_count++] = stmt;
 	}
 
 	expect_token(TOKEN_RBRACE);
 	return block_node;
 }
-ASTNode *parse_function_call()
+ast_node_t *parse_function_call()
 {
 	printf("parsing function call!\n");
-	ASTNode *node = create_ast_node(AST_FUNCTION_CALL);
+	ast_node_t *node = create_ast_node(AST_FUNCTION_CALL);
 
 	// Parse function name
 	node->data.function_call.name = create_ast_node(AST_IDENTIFIER);
@@ -85,9 +85,9 @@ ASTNode *parse_function_call()
 
 	while (current_token()->type != TOKEN_RPAREN)
 	{
-		ASTNode *arg = parse_expression();
+		ast_node_t *arg = parse_expression();
 		node->data.function_call.arguments = realloc(
-		    node->data.function_call.arguments, sizeof(ASTNode *) * (node->data.function_call.arg_count + 1));
+		    node->data.function_call.arguments, sizeof(ast_node_t *) * (node->data.function_call.arg_count + 1));
 		node->data.function_call.arguments[node->data.function_call.arg_count++] = arg;
 
 		if (current_token()->type == TOKEN_COMMA)
@@ -100,10 +100,10 @@ ASTNode *parse_function_call()
 	return node;
 }
 
-ASTNode *parse_asm()
+ast_node_t *parse_asm()
 {
 	expect_token(TOKEN_KEYWORD); // asm
-	ASTNode *node = create_ast_node(AST_INLINE_ASM);
+	ast_node_t *node = create_ast_node(AST_INLINE_ASM);
 
 	// expect_token(TOKEN_STRING);
 	if(current_token()->type != TOKEN_STRING)
@@ -122,10 +122,10 @@ ASTNode *parse_asm()
 	return node;
 }
 
-ASTNode *parse_return()
+ast_node_t *parse_return()
 {
 	expect_token(TOKEN_KEYWORD); // return
-	ASTNode *node = create_ast_node(AST_RETURN);
+	ast_node_t *node = create_ast_node(AST_RETURN);
 
 	node->data.return_statement.value = 0;
 	if (current_token()->type != TOKEN_SEMICOLON)
@@ -135,11 +135,11 @@ ASTNode *parse_return()
 	return node;
 }
 
-ASTNode *parse_for()
+ast_node_t *parse_for()
 {
 	expect_token(TOKEN_KEYWORD); // for
 
-	ASTNode *node = create_ast_node(AST_FOR);
+	ast_node_t *node = create_ast_node(AST_FOR);
 	expect_token(TOKEN_LPAREN);
 
 	if (current_token()->type == TOKEN_KEYWORD && wcscmp(current_token()->value.str, L"int") == 0)
@@ -164,7 +164,7 @@ ASTNode *parse_for()
 }
 
 
-ASTNode *parse_statement()
+ast_node_t *parse_statement()
 {
 #define PARSE_KEYWORD(KEYWORD, FUNC)                                                                                   \
 	if (wcscmp(current_token()->value.str, WIDEN(#KEYWORD)) == 0)                                                  \
@@ -174,7 +174,7 @@ ASTNode *parse_statement()
 	{
 		if (wcscmp(current_token()->value.str, L"int") == 0) // ; handled differently
 		{
-			ASTNode *decl = parse_declaration();
+			ast_node_t *decl = parse_declaration();
 			expect_token(TOKEN_SEMICOLON);
 			return decl;
 		}
@@ -187,7 +187,7 @@ ASTNode *parse_statement()
 		PARSE_KEYWORD(return, return parse_return());
 	}
 
-	ASTNode *expr = parse_expression();
+	ast_node_t *expr = parse_expression();
 	expect_token(TOKEN_SEMICOLON);
 	return expr;
 
@@ -195,11 +195,11 @@ ASTNode *parse_statement()
 #undef PARSE_KEYWORD
 }
 
-ASTNode *parse_declaration()
+ast_node_t *parse_declaration()
 {
 	expect_token(TOKEN_KEYWORD); // variable type ('int')
 
-	ASTNode *node = create_ast_node(AST_DECLARATION);
+	ast_node_t *node = create_ast_node(AST_DECLARATION);
 	node->data.declaration.identifier = create_ast_node(AST_IDENTIFIER);
 	node->data.declaration.identifier->data.identifier = wcsdup(current_token()->value.str);
 	expect_token(TOKEN_IDENTIFIER);
@@ -221,11 +221,11 @@ ASTNode *parse_declaration()
 	return node;
 }
 
-ASTNode *parse_function()
+ast_node_t *parse_function()
 {
 	expect_token(TOKEN_KEYWORD); // 'func'
 
-	ASTNode *node = create_ast_node(AST_FUNCTION);
+	ast_node_t *node = create_ast_node(AST_FUNCTION);
 	node->data.function.name = create_ast_node(AST_IDENTIFIER);
 	node->data.function.name->data.identifier = wcsdup(current_token()->value.str);
 	expect_token(TOKEN_IDENTIFIER);
@@ -236,11 +236,11 @@ ASTNode *parse_function()
 
 	while (current_token()->type != TOKEN_RPAREN)
 	{
-		ASTNode *param = parse_declaration();
+		ast_node_t *param = parse_declaration();
 		// advance_token();
 
 		node->data.function.parameters =
-		    realloc(node->data.function.parameters, sizeof(ASTNode *) * (node->data.function.param_count + 1));
+		    realloc(node->data.function.parameters, sizeof(ast_node_t *) * (node->data.function.param_count + 1));
 		node->data.function.parameters[node->data.function.param_count++] = param;
 
 		if (current_token()->type == TOKEN_COMMA)
@@ -254,11 +254,11 @@ ASTNode *parse_function()
 	return node;
 }
 
-ASTNode *parse_if()
+ast_node_t *parse_if()
 {
 	expect_token(TOKEN_KEYWORD); // 'if'
 
-	ASTNode *node = create_ast_node(AST_IF);
+	ast_node_t *node = create_ast_node(AST_IF);
 	expect_token(TOKEN_LPAREN);
 	node->data.if_statement.condition = parse_expression_priority();
 	expect_token(TOKEN_RPAREN);
@@ -278,11 +278,11 @@ ASTNode *parse_if()
 	return node;
 }
 
-ASTNode *parse_while()
+ast_node_t *parse_while()
 {
 	expect_token(TOKEN_KEYWORD); // 'while'
 
-	ASTNode *node = create_ast_node(AST_WHILE);
+	ast_node_t *node = create_ast_node(AST_WHILE);
 	expect_token(TOKEN_LPAREN);
 	node->data.while_statement.condition = parse_expression();
 	expect_token(TOKEN_RPAREN);
@@ -291,7 +291,7 @@ ASTNode *parse_while()
 	return node;
 }
 
-ASTNode *parse_expression()
+ast_node_t *parse_expression()
 {
 	if (current_token()->type == TOKEN_IDENTIFIER && tokens[token_index + 1].type == TOKEN_ASSIGN)
 	{
@@ -302,9 +302,9 @@ ASTNode *parse_expression()
 	return parse_expression_priority();
 }
 
-ASTNode *parse_assignment()
+ast_node_t *parse_assignment()
 {
-	ASTNode *node = create_ast_node(AST_ASSIGNMENT);
+	ast_node_t *node = create_ast_node(AST_ASSIGNMENT);
 
 	// left-hand side (identifier)
 	node->data.assignment.left = create_ast_node(AST_IDENTIFIER);
@@ -319,11 +319,11 @@ ASTNode *parse_assignment()
 	fprintf(stderr, "parsed assignment\n");
 	return node;
 }
-ASTNode *parse_primary()
+ast_node_t *parse_primary()
 {
 	if (current_token()->type == TOKEN_NUMBER)
 	{
-		ASTNode *node = create_ast_node(AST_NUMBER);
+		ast_node_t *node = create_ast_node(AST_NUMBER);
 		node->data.number = current_token()->value.number;
 		advance_token();
 		return node;
@@ -337,7 +337,7 @@ ASTNode *parse_primary()
 			return parse_function_call();
 		}
 
-		ASTNode *node = create_ast_node(AST_IDENTIFIER);
+		ast_node_t *node = create_ast_node(AST_IDENTIFIER);
 		node->data.identifier = wcsdup(current_token()->value.str);
 		advance_token();
 		return node;
@@ -346,7 +346,7 @@ ASTNode *parse_primary()
 	if (current_token()->type == TOKEN_LPAREN)
 	{
 		advance_token(); // Consume '('
-		ASTNode *expr = parse_expression_priority();
+		ast_node_t *expr = parse_expression_priority();
 		if (current_token()->type != TOKEN_RPAREN)
 		{
 			fprintf(stderr, "Expected ')' after expression\n");
@@ -364,7 +364,7 @@ ASTNode *parse_primary()
 	return 0;
 }
 
-void free_ast(ASTNode *node)
+void free_ast(ast_node_t *node)
 {
 	if (!node)
 		return;
@@ -435,30 +435,30 @@ void free_ast(ASTNode *node)
 	free(node);
 }
 
-ASTNode *parse_program(token_t *t)
+ast_node_t *parse_program(token_t *t)
 {
 	tokens = t;
 	token_index = 0;
 
-	ASTNode *program_node = create_ast_node(AST_PROGRAM);
+	ast_node_t *program_node = create_ast_node(AST_PROGRAM);
 	program_node->data.program.children = NULL;
 	program_node->data.program.child_count = 0;
 
 	while (current_token()->type != TOKEN_EOF)
 	{
-		ASTNode *stmt = parse_statement();
+		ast_node_t *stmt = parse_statement();
 		program_node->data.program.children =
 		    realloc(program_node->data.program.children,
-			    sizeof(ASTNode *) * (program_node->data.program.child_count + 1));
+			    sizeof(ast_node_t *) * (program_node->data.program.child_count + 1));
 		program_node->data.program.children[program_node->data.program.child_count++] = stmt;
 	}
 
 	return program_node;
 }
 
-static ASTNode *create_binary_op_node(ASTNode *left, token_type_t op, ASTNode *right)
+static ast_node_t *create_binary_op_node(ast_node_t *left, token_type_t op, ast_node_t *right)
 {
-	ASTNode *node = create_ast_node(AST_BINARY);
+	ast_node_t *node = create_ast_node(AST_BINARY);
 	node->data.binary_op.left = left;
 	node->data.binary_op.op = op;
 	node->data.binary_op.right = right;
@@ -466,16 +466,16 @@ static ASTNode *create_binary_op_node(ASTNode *left, token_type_t op, ASTNode *r
 }
 
 #define PARSE(NAME, CONDITION, NEXT)                                                                                   \
-	ASTNode *NAME()                                                                                                \
+	ast_node_t *NAME()                                                                                                \
 	{                                                                                                              \
-		ASTNode *node = NEXT();                                                                                \
+		ast_node_t *node = NEXT();                                                                                \
 		if (!node)                                                                                             \
 			return 0;                                                                                      \
 		while (CONDITION)                                                                                      \
 		{                                                                                                      \
 			token_type_t op = current_token()->type;                                                       \
 			advance_token();                                                                               \
-			ASTNode *right = NEXT();                                                                       \
+			ast_node_t *right = NEXT();                                                                       \
 			node = create_binary_op_node(node, op, right);                                                 \
 		}                                                                                                      \
 		return node;                                                                                           \

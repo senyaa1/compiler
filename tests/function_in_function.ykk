@@ -1,0 +1,9 @@
+func f(int x)
+{
+	func g(int y)
+	{
+		return y;
+	}
+
+	return x + 1;
+}

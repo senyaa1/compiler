@@ -17,7 +17,7 @@ static Agnode_t *create_node(Agraph_t *g)
 	return node;
 }
 
-static Agnode_t *render_node(Agraph_t *g, ASTNode *node)
+static Agnode_t *render_node(Agraph_t *g, ast_node_t *node)
 {
 	if (!node)
 		return 0;
@@ -150,7 +150,7 @@ static Agnode_t *render_node(Agraph_t *g, ASTNode *node)
 }
 
 
-void draw_ast(ASTNode *ast, const char *output_filename)
+void draw_ast(ast_node_t *ast, const char *output_filename)
 {
 	GVC_t *gvc = gvContext();
 
