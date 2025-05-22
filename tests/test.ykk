@@ -4,20 +4,8 @@
 
 func main()
 {
-	int a = get_num();
-	print_num(a);
-	print_num(228);
+	print_num(get_num());
+
 	return 0;
 }
-
-
-func _start()
-{
-	main();
-
-	asm "mov edi, ecx";
-	asm "mov eax, 60";
-	asm "syscall";
-}
-
 

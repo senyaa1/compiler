@@ -19,7 +19,6 @@
  * FIX error handling (don't exit e.t.c.)
  * FIX variable scope
  * refactor
- * preprocessor
  * change keywords
  * stdlib
  * factorial
@@ -45,7 +44,6 @@ int main(int argc, char **argv)
 	// }
 
 	preprocess(argv[1], &source_text);
-	printf("preprocessed text: %ls\n", source_text);
 
 	token_t *tokens = lex(source_text);
 

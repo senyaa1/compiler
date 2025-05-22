@@ -132,6 +132,20 @@ static void preprocess_file(const wchar_t *fname, int depth)
 	fclose(fp);
 }
 
+
+static void append_elf64_start_function(buf_writer_t *writer)
+{
+	bufncpy(writer, L"		\
+	func _start()			\
+	{				\
+		main();			\
+		asm \"mov edi, ecx\";	\
+		asm \"mov eax, 60\";	\
+		asm \"syscall\";	\
+	}");
+}
+
+
 int preprocess(const char *file_path, wchar_t **buffer)
 {
 	if (preprocessor_buf.buf)
@@ -139,8 +153,9 @@ int preprocess(const char *file_path, wchar_t **buffer)
 
 	preprocessor_buf = (buf_writer_t){.buf = calloc(1024, sizeof(wchar_t)), .buf_len = 1024};
 
-
 	preprocess_file((const wchar_t *)mbs_to_wcs(file_path), 0);
+
+	append_elf64_start_function(&preprocessor_buf);
 
 	*buffer = preprocessor_buf.buf;
 }

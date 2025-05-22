@@ -459,7 +459,7 @@ void print_assignment(var_assignment_t *assignment)
 #define TRANSLATE_BINARY_OP(IR_NAME, INSTRUCTION)                                                                      \
 	case IR_NAME:                                                                                                  \
 		{                                                                                                      \
-			bufncpy(writer, L"; binary-binary-op");	\
+			bufncpy(writer, L"; binary-binary-op");                                                        \
 			var_assignment_t res = assignments[inst->operands[0].var_idx];                                 \
 			var_assignment_t op1 = assignments[inst->operands[1].var_idx];                                 \
 			var_assignment_t op2 = assignments[inst->operands[2].var_idx];                                 \
@@ -495,8 +495,8 @@ void print_assignment(var_assignment_t *assignment)
 			swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"cmp %ls, %ls", op1.current_reg, op2.current_reg);         \
 			bufncpy(writer, fmt_buf);                                                                      \
                                                                                                                        \
-			swprintf(fmt_buf, FMT_BUF_MAX_LEN, SET_CONDITION L" %ls",                               \
-				 get_corresponding_m8_register(res.current_reg));                     \
+			swprintf(fmt_buf, FMT_BUF_MAX_LEN, SET_CONDITION L" %ls",                                      \
+				 get_corresponding_m8_register(res.current_reg));                                      \
 			bufncpy(writer, fmt_buf);                                                                      \
 			write_back_if_needed(writer, &res, false);                                                     \
                                                                                                                        \
@@ -705,6 +705,8 @@ wchar_t *translate_ir_to_x86(const wchar_t *ir_buf)
 		// printf("translating: %ls, args: %d varcnt: %d\n", fn->name, fn->arg_cnt, fn->var_cnt);
 		translate_function(&writer, fn);
 	}
+
+	bufend(&writer);
 
 	return writer.buf;
 }
