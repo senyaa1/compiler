@@ -1,14 +1,14 @@
-func print_num(int x)
+действо явить_нумер(цель х)
 {
-	asm "call print_num";
+	съборъ "call print_num";
 
-	return 0;
+	воздать 0;
 }
 
-func get_num()
+действо принять_нумер()
 {
-	asm "call get_num";
-	asm "pop rbp";
-	asm "ret";
+	съборъ "call get_num";
+	съборъ "pop rbp";
+	съборъ "ret";
 }
 

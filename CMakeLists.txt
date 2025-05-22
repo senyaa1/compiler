@@ -9,10 +9,10 @@ file(GLOB SOURCE_FILES CONFIGURE_DEPENDS
 add_executable(compiler ${SOURCE_FILES})
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
-    target_compile_options(compiler PUBLIC -g -march=native -fsanitize=address -fno-omit-frame-pointer -fpermissive -fno-inline-small-functions)
-    target_link_libraries(compiler PUBLIC gvc cgraph cdt -g -fsanitize=address)
+    target_compile_options(compiler PUBLIC -g -march=native)
+    target_link_libraries(compiler PUBLIC gvc cgraph cdt -g)
 else()
-    target_compile_options(compiler PUBLIC -g -march=native -O3 -fno-omit-frame-pointer -fpermissive -fno-inline-small-functions)
+    target_compile_options(compiler PUBLIC -g -march=native -O3)
     target_link_libraries(compiler PUBLIC gvc cgraph cdt)
 endif()
 

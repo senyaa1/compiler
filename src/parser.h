@@ -102,6 +102,9 @@ struct ast_node
 };
 
 
+ast_node_t *parse_expression_priority();
+int expect_token(token_type_t type);
+
 ast_node_t *parse_block();
 ast_node_t *parse_statement();
 ast_node_t *parse_expression();

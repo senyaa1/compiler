@@ -4,54 +4,44 @@
 #include "list.h"
 #include <wchar.h>
 
-typedef enum IR_INSTRUCTION
-{
-	IR_INVALID = 0,
-	IR_CONST,
-	IR_ASSIGN,
-	IR_VARDECL,
-	IR_BRANCH_UNCONDITIONAL,
-	IR_BRANCH_CONDITIONAL,
-	IR_CALL,
-	IR_RET,
-	IR_NATIVE_ASM,
-	IR_BINARY_ADD,
-	IR_BINARY_SUB,
-	IR_BINARY_MUL,
-	IR_BINARY_DIV,
-	IR_BINARY_XOR,
-	IR_BINARY_OR,
-	IR_BINARY_AND,
-	IR_BINARY_EQU,
-	IR_BINARY_LESS,
-	IR_BINARY_GREATER,
-	IR_LABEL
-} ir_instruction_type_t;
+#define INT_SZ 8
 
-typedef struct ir_operand {
-	int var_idx;
-	character_t *label;
-	int64_t value;
-} ir_operand_t;
-
-typedef struct ir_instruction
+typedef enum VAR_ASSIGNMENTS
 {
-	ir_instruction_type_t type;
-	int operand_cnt;
-	ir_operand_t *operands;
-} ir_instruction_t;
+	STACK = 0,
+	// REG_RAX,
+	// REG_RBX,
+	REG_RCX = 1,
+	REG_RDX = 2,
+	REG_RSI = 3,
+	REG_RDI = 4,
+	REG_R8 = 5,
+	REG_R9 = 6,
+	REG_R10 = 7,
+	REG_R11 = 8,
+	REG_R12 = 9,
+	REG_R13 = 10,
+	REG_R14 = 11,
+	REG_R15 = 12,
+} assignment_type_t;
 
-typedef struct ir_function
+typedef struct var_assignment
 {
-	int arg_cnt;
-	int var_cnt;
-	wchar_t *name;
-	list_t instructions;
-} ir_function_t;
+	assignment_type_t type;
+	int stack_idx;
+	character_t *current_reg;
+} var_assignment_t;
 
-typedef struct ir_program
-{
-	list_t functions;
-} ir_program_t;
+static character_t *x86_regs[] = {
+    L"rax", L"rbx", L"rcx", L"rdx", L"rsi", L"rdi", L"r8", L"r9", L"r10", L"r11", L"r12", L"r13", L"r14", L"r15",
+};
+
+static character_t *reg_names[] = {
+    L"rcx", L"rdx", L"rsi", L"rdi", L"r8", L"r9", L"r10", L"r11", L"r12", L"r13", L"r14", L"r15",
+};
+
+static character_t *m8_reg_names[] = {
+    L"al", L"bl", L"cl", L"dl", L"sil", L"dil", L"r8b", L"r9b", L"r10b", L"r11b", L"r12b", L"r13b", L"r14b", L"r15b",
+};
 
 wchar_t *translate_ir_to_x86(const wchar_t *ir_buf);

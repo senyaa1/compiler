@@ -14,22 +14,6 @@
 #include "preprocessor.h"
 #include "x86.h"
 
-/* TODO:
- * FIX memory leaks
- * FIX error handling (don't exit e.t.c.)
- * FIX variable scope
- * refactor
- * change keywords
- * stdlib
- * factorial
- */
-
-const char *__asan_default_options()
-{
-	return "detect_leaks=0";
-}
-
-
 int main(int argc, char **argv)
 {
 	setlocale(LC_ALL, "ru_RU.UTF-8");
@@ -48,7 +32,7 @@ int main(int argc, char **argv)
 	token_t *tokens = lex(source_text);
 
 	ast_node_t *ast = parse_program(tokens);
-	draw_ast(ast, "out/ast.png");
+	// draw_ast(ast, "out/ast.png");
 
 	printf("Parsed program successfully.\n");
 

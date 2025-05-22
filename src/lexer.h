@@ -5,16 +5,15 @@
 #include <wchar.h>
 
 #define KEYWORDS                                                                                                       \
-	KEYWORD(int)                                                                                                   \
-	KEYWORD(func)                                                                                                  \
-	KEYWORD(if)                                                                                                    \
-	KEYWORD(else)                                                                                                  \
-	KEYWORD(while)                                                                                                 \
-	KEYWORD(asm)                                                                                                   \
-	KEYWORD(return)                                                                                                \
-	KEYWORD(for)
-	// KEYWORD(out)                                                                                                   \
-	// KEYWORD(in)                                                                                                    \
+	KEYWORD(цель)                                                                                                  \
+	KEYWORD(действо)                                                                                               \
+	KEYWORD(аще)                                                                                                   \
+	KEYWORD(инако)                                                                                                 \
+	KEYWORD(доколе)                                                                                                \
+	KEYWORD(съборъ)                                                                                                \
+	KEYWORD(воздать)                                                                                               \
+	KEYWORD(ради)
+
 
 #define WIDEN(X) L##X
 

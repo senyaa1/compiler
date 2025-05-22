@@ -9,6 +9,9 @@
 #include "buffer.h"
 #include "preprocessor.h"
 
+#define INCLUDE_KEYWORD L"приложить"
+#define INCLUDE_KEYWORD_LEN 9
+
 static buf_writer_t preprocessor_buf = {};
 
 static FILE *wfopen_utf8(const wchar_t *path, const wchar_t *mode)
@@ -98,9 +101,9 @@ static void preprocess_file(const wchar_t *fname, int depth)
 			++p;
 			while (iswspace(*p))
 				++p;
-			if (wcsncmp(p, L"include", 7) == 0)
+			if (wcsncmp(p, INCLUDE_KEYWORD, INCLUDE_KEYWORD_LEN) == 0)
 			{
-				p += 7;
+				p += INCLUDE_KEYWORD_LEN;
 				while (iswspace(*p))
 					++p;
 				if (*p == L'"')
@@ -135,13 +138,13 @@ static void preprocess_file(const wchar_t *fname, int depth)
 
 static void append_elf64_start_function(buf_writer_t *writer)
 {
-	bufncpy(writer, L"		\
-	func _start()			\
-	{				\
-		main();			\
-		asm \"mov edi, ecx\";	\
-		asm \"mov eax, 60\";	\
-		asm \"syscall\";	\
+	bufncpy(writer, L"			\
+	действо _start()			\
+	{					\
+		царь_батюшка_главный();		\
+		съборъ \"mov edi, ecx\";	\
+		съборъ \"mov eax, 60\";		\
+		съборъ \"syscall\";		\
 	}");
 }
 

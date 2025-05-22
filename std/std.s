@@ -1,56 +1,60 @@
-bits 64
-section .data
-buf     times 32 db 0 
-global print_num
 global get_num
+global print_num
+
+section .bss
+buf     resb 22              ; '-' + 20 digits + '\n'  = 22 bytes max
 
 section .text
 
+
 print_num:
-    push rax 
-    push rbx 
-    push rcx 
-    push rdx 
-    push rsi 
-    push rdi
+        mov	    rax, [rbp + 2 * 8]
 
-    mov	    rax, [rbp + 2 * 8]
+        mov     rbx, buf + 21        
+        mov     byte [rbx], 10       
+        dec     rbx                  
 
-    mov     rdi, buf + 31          
-    mov     byte   [rdi], 10       
-    lea     rsi, [rdi - 1]         
-    mov     rcx, rax               
+        mov     rcx, rax             
+        cmp     rax, 0
+        jge     .digits
+        neg     rax                  
+        mov     rdi, 1               
+        jmp     .digits_start
+.digits:
+        xor     rdi, rdi             
+.digits_start:
 
-.convert_loop:                     
-    xor     rdx, rdx               
-    mov     rbx, 10
-    div     rbx                    
-    add     dl, '0'                
-    mov     byte [rsi], dl
-    dec     rsi
-    mov     rcx, rax               
-    test    rax, rax
-    jnz     .convert_loop
+.digit_loop:
+        xor     rdx, rdx             
+        mov     r8, 10
+        div     r8                   
+        add     dl, '0'              
+        mov     [rbx], dl
+        dec     rbx
+        test    rax, rax
+        jne     .digit_loop
 
-    inc     rsi                    
-    mov     rdx, buf + 32          
-    sub     rdx, rsi               
+        test    rdi, rdi
+        jz      .adjust_ptr
+        mov     byte [rbx], '-'
+        dec     rbx
+.adjust_ptr:
+        inc     rbx                  
 
-    mov     rax, 1                
-    mov     rdi, 1               
-    syscall
+        mov     rdx, buf + 22        
+        sub     rdx, rbx             
 
-    pop rdi 
-    pop rsi 
-    pop rdx 
-    pop rcx 
-    pop rbx 
-    pop rax
-    ret
+        mov     rax, 1               
+        mov     rdi, 1               
+        mov     rsi, rbx             
+        syscall
+        ret
+
 
 get_num:
         push    rbp
         mov     rbp, rsp
+        sub     rsp, 32        
 
         push    rdi
         push    rsi
@@ -59,7 +63,6 @@ get_num:
         push    r8
         push    r11            
 
-        sub     rsp, 32        
 
         xor     edi, edi       
         lea     rsi, [rsp]     
@@ -104,8 +107,6 @@ get_num:
         neg     rax
 
 .cleanup:
-        add     rsp, 32       
-
         pop     r11
         pop     r8
         pop     rcx
@@ -113,6 +114,7 @@ get_num:
         pop     rsi
         pop     rdi
 
-        leave                  
+        mov     rsp, rbp
+        pop     rbp
         ret
 

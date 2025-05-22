@@ -8,13 +8,6 @@
 #include "lexer.h"
 #include "parser.h"
 
-/* TODO:
- * +=/-=
- * scopes??
- * differentiate func declaration / implementation
- * fix FIXME
- */
-
 static token_t *tokens = 0;
 static size_t token_index = 0;
 
@@ -26,21 +19,6 @@ static token_t *current_token()
 static void advance_token()
 {
 	token_index++;
-}
-
-ast_node_t *parse_expression_priority();
-
-int expect_token(token_type_t type)
-{
-	if (current_token()->type == type)
-	{
-		advance_token();
-		return 1;
-	}
-	fprintf(stderr, "Unexpected token: %d, while was expecting %d\n", current_token()->type, type);
-	exit(1); // FIXME: fix this abomination
-
-	return 0;
 }
 
 ast_node_t *create_ast_node(ast_node_type_t type)
@@ -122,6 +100,19 @@ ast_node_t *parse_asm()
 	return node;
 }
 
+int expect_token(token_type_t type)
+{
+	if (current_token()->type == type)
+	{
+		advance_token();
+		return 1;
+	}
+	fprintf(stderr, "Unexpected token: %d, while was expecting %d\n", current_token()->type, type);
+	exit(1);
+
+	return 0;
+}
+
 ast_node_t *parse_return()
 {
 	expect_token(TOKEN_KEYWORD); // return
@@ -142,7 +133,7 @@ ast_node_t *parse_for()
 	ast_node_t *node = create_ast_node(AST_FOR);
 	expect_token(TOKEN_LPAREN);
 
-	if (current_token()->type == TOKEN_KEYWORD && wcscmp(current_token()->value.str, L"int") == 0)
+	if (current_token()->type == TOKEN_KEYWORD && wcscmp(current_token()->value.str, L"цель") == 0)
 		node->data.for_statement.initializer = parse_declaration();
 	else if (current_token()->type != TOKEN_SEMICOLON)
 		node->data.for_statement.initializer = parse_expression();
@@ -172,19 +163,19 @@ ast_node_t *parse_statement()
 
 	if (current_token()->type == TOKEN_KEYWORD)
 	{
-		if (wcscmp(current_token()->value.str, L"int") == 0) // ; handled differently
+		if (wcscmp(current_token()->value.str, L"цель") == 0) // ; handled differently
 		{
 			ast_node_t *decl = parse_declaration();
 			expect_token(TOKEN_SEMICOLON);
 			return decl;
 		}
 
-		PARSE_KEYWORD(func, return parse_function());
-		PARSE_KEYWORD(if, return parse_if());
-		PARSE_KEYWORD(while, return parse_while());
-		PARSE_KEYWORD(for, return parse_for());
-		PARSE_KEYWORD(asm, return parse_asm());
-		PARSE_KEYWORD(return, return parse_return());
+		PARSE_KEYWORD(действо, return parse_function());
+		PARSE_KEYWORD(аще, return parse_if());
+		PARSE_KEYWORD(доколе, return parse_while());
+		PARSE_KEYWORD(ради, return parse_for());
+		PARSE_KEYWORD(съборъ, return parse_asm());
+		PARSE_KEYWORD(воздать, return parse_return());
 	}
 
 	ast_node_t *expr = parse_expression();
@@ -265,7 +256,7 @@ ast_node_t *parse_if()
 
 	node->data.if_statement.then_branch = parse_block();
 
-	if (current_token()->type == TOKEN_KEYWORD && wcscmp(current_token()->value.str, L"else") == 0)
+	if (current_token()->type == TOKEN_KEYWORD && wcscmp(current_token()->value.str, L"инако") == 0)
 	{
 		advance_token();
 		node->data.if_statement.else_branch = parse_block();
