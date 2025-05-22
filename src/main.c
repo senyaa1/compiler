@@ -7,10 +7,11 @@
 #include "fs.h"
 #include "graph.h"
 #include "io.h"
+#include "ir.h"
 #include "lexer.h"
 #include "parser.h"
 #include "preprocessor.h"
-#include "ir.h"
+#include "x86.h"
 
 /* TODO:
  * FIX memory leaks
@@ -47,9 +48,12 @@ int main(int argc, char **argv)
 	printf("Parsed program successfully.\n");
 	buf_writer_t ir_buf = translate_to_ir(ast);
 
-	printf("IR: \n\n%ls\n\n", ir_buf.buf);
-	write_file("out.ir", ir_buf.buf, wcslen(ir_buf.buf));
+	// write_file("out.ir", ir_buf.buf, wcslen(ir_buf.buf));
 
+	printf("IR: \n\n%ls\n\n", ir_buf.buf);
+
+	wchar_t* asm_buf = translate_ir_to_x86(ir_buf.buf);
+	printf("x86 output: \n%ls\n", asm_buf);
 
 	// assemble("out.s", "a.out");
 	// free(asm_buf.buf);

@@ -40,6 +40,7 @@ void bufcpy(buf_writer_t *writer, const wchar_t *string)
 void bufncpy(buf_writer_t *writer, const wchar_t *string)
 {
 	bufcpy(writer, string);
+	ensure_allocated(writer, 8);
 	writer->buf[writer->cursor++] = L'\n';
 }
 

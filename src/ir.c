@@ -182,7 +182,8 @@ int translate_recursive(buf_writer_t *writer, ast_node_t *node)
 			// int vardecl_idx = initializer_idx;
 
 			int vardecl_idx = ++ctx.scope_var_cnt;
-			swprintf(line_buf, LINE_BUF_SZ, L"%%%d = vardecl %%%d", vardecl_idx, initializer_idx);
+			// swprintf(line_buf, LINE_BUF_SZ, L"%%%d = vardecl %%%d", vardecl_idx, initializer_idx);
+			swprintf(line_buf, LINE_BUF_SZ, L"%%%d = assign %%%d", vardecl_idx, initializer_idx);
 			bufncpy(writer, line_buf);
 
 			character_t *var_label =
@@ -230,7 +231,9 @@ int translate_recursive(buf_writer_t *writer, ast_node_t *node)
 
 			bufncpy(writer, L")\n{");
 			translate_recursive(writer, node->data.function.body);
-			bufncpy(writer, L"}");
+	
+			swprintf(line_buf, LINE_BUF_SZ, L"} %d", ctx.scope_var_cnt);
+			bufncpy(writer, line_buf);
 
 			ctx.scope_var_cnt = 0;
 			ctx.current_function = 0;
@@ -291,9 +294,8 @@ int translate_recursive(buf_writer_t *writer, ast_node_t *node)
 			bufncpy(writer, line_buf);
 			return ctx.scope_var_cnt;
 		case AST_INLINE_ASM:
-			bufncpy(writer, L"native_asm {");
+			bufcpy(writer, L"native_asm ");
 			bufncpy(writer, node->data.string.value);
-			bufncpy(writer, L"}");
 			break;
 		case AST_FUNCTION_CALL:
 			identifier_t *called = get_function(node->data.function_call.name->data.identifier);
@@ -489,22 +491,7 @@ buf_writer_t translate_to_ir(ast_node_t *ast)
 	buf_writer_t writer = {writer.buf = (character_t *)calloc(DEFAULT_ASM_ALLOC, sizeof(character_t)),
 			       .buf_len = DEFAULT_ASM_ALLOC};
 
-	// bufncpy(&writer, L"call main");
-	// bufncpy(&writer, L"hlt");
-
 	translate_recursive(&writer, ast);
-	//
-	// bufncpy(&writer, L"; data");
-	//
-	// for (int i = 0; i < identifier_cnt; i++)
-	// {
-	// 	if (identifiers[i].type != TYPE_VARIABLE)
-	// 		continue;
-	//
-	// 	bufcpy(&writer, identifiers[i].value.variable.label);
-	// 	bufncpy(&writer, L":");
-	// 	bufncpy(&writer, L"\t dq 0");
-	// }
 	bufend(&writer);
 
 	free_identifiers();
