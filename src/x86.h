@@ -25,6 +25,7 @@ typedef enum IR_INSTRUCTION
 	IR_BINARY_EQU,
 	IR_BINARY_LESS,
 	IR_BINARY_GREATER,
+	IR_LABEL
 } ir_instruction_type_t;
 
 typedef struct ir_operand {

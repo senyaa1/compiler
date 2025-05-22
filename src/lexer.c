@@ -251,7 +251,7 @@ token_t *lex(const character_t *text)
 	do
 	{
 		tokens[i] = next_token(&lexer);
-		print_token(tokens[i]);
+		// print_token(tokens[i]);
 		i++;
 		if (i >= allocated)
 		{

@@ -52,4 +52,4 @@ typedef struct translator_ctx
 	character_t* current_function;
 } translator_ctx_t;
 
-buf_writer_t translate_to_ir(ast_node_t *ast);
+wchar_t* translate_to_ir(ast_node_t *ast);

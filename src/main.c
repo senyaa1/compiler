@@ -3,6 +3,7 @@
 #include <string.h>
 #include <wchar.h>
 
+#include "assembler.h"
 #include "buffer.h"
 #include "fs.h"
 #include "graph.h"
@@ -16,12 +17,19 @@
 /* TODO:
  * FIX memory leaks
  * FIX error handling (don't exit e.t.c.)
+ * FIX variable scope
+ * refactor
+ * preprocessor
+ * change keywords
+ * stdlib
+ * factorial
  */
 
 const char *__asan_default_options()
 {
 	return "detect_leaks=0";
 }
+
 
 int main(int argc, char **argv)
 {
@@ -32,35 +40,37 @@ int main(int argc, char **argv)
 	if (!len)
 	{
 		print_error("Could not open file\n");
-		goto exit;
+		free(source_text);
+		return 0;
 	}
 
 	// if (preprocess(argv[1], &source_text))
-
 	// printf("preprocessed text: %s\n", source_text);
 
 	token_t *tokens = lex(source_text);
 
 	ast_node_t *ast = parse_program(tokens);
-
-	// draw_ast(ast, "ast.png");
+	draw_ast(ast, "ast.png");
 
 	printf("Parsed program successfully.\n");
-	buf_writer_t ir_buf = translate_to_ir(ast);
 
-	// write_file("out.ir", ir_buf.buf, wcslen(ir_buf.buf));
+	wchar_t *ir_buf = translate_to_ir(ast);
 
-	printf("IR: \n\n%ls\n\n", ir_buf.buf);
+	write_file("out/a.ir", ir_buf, wcslen(ir_buf));
+	// printf("IR: \n\n%ls\n\n", ir_buf.buf);
 
-	wchar_t* asm_buf = translate_ir_to_x86(ir_buf.buf);
-	printf("x86 output: \n%ls\n", asm_buf);
+	wchar_t *asm_buf = translate_ir_to_x86(ir_buf);
 
-	// assemble("out.s", "a.out");
-	// free(asm_buf.buf);
+	// printf("x86 output: \n%ls\n", asm_buf);
+	write_file("out/a.s", asm_buf, wcslen(asm_buf));
 
+	assemble_nasm("out/a.s", "out/a.out");
+
+	free(asm_buf);
+	free(ir_buf);
 	free_tokens(tokens);
 	free_ast(ast);
-exit:
+
 	free(source_text);
 	return 0;
 }

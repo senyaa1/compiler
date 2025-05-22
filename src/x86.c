@@ -46,6 +46,18 @@ static wchar_t *parse_ident(const wchar_t **p, const wchar_t *end)
 	return str;
 }
 
+static wchar_t *parse_string(const wchar_t **p, const wchar_t *end)
+{
+	skip_ws(p, end);
+	const wchar_t *start = *p;
+	while (*p < end && **p != L'\"')
+		(*p)++;
+	size_t len = *p - start;
+	wchar_t *str = calloc(len + 1, sizeof(wchar_t));
+	wcsncpy(str, start, len);
+	return str;
+}
+
 static int parse_int(const wchar_t **p, const wchar_t *end)
 {
 	skip_ws(p, end);
@@ -123,6 +135,11 @@ ir_program_t parse_ir(const wchar_t *ir_buf)
 						q++;
 					if (q < end && *q == L':')
 					{
+						ir_instruction_t *inst = calloc(1, sizeof(ir_instruction_t));
+						inst->type = IR_LABEL;
+						inst->operands = calloc(1, sizeof(ir_operand_t));
+						inst->operands[0].label = parse_ident(&p, end);
+						list_insert_tail(&fn->instructions, inst);
 						p = q + 1;
 						continue;
 					}
@@ -164,6 +181,18 @@ ir_program_t parse_ir(const wchar_t *ir_buf)
 				{
 					inst->type = IR_BINARY_XOR;
 				}
+				else if (expect_kw(&p, end, L"equ"))
+				{
+					inst->type = IR_BINARY_EQU;
+				}
+				else if (expect_kw(&p, end, L"gt"))
+				{
+					inst->type = IR_BINARY_GREATER;
+				}
+				else if (expect_kw(&p, end, L"lt"))
+				{
+					inst->type = IR_BINARY_LESS;
+				}
 				else if (expect_kw(&p, end, L"const"))
 				{
 					inst->type = IR_CONST;
@@ -172,10 +201,6 @@ ir_program_t parse_ir(const wchar_t *ir_buf)
 				{
 					inst->type = IR_ASSIGN;
 				}
-				// else if (expect_kw(&p, end, L"vardecl"))
-				// {
-				// 	inst->type = IR_VARDECL;
-				// }
 				else if (expect_kw(&p, end, L"call"))
 				{
 					inst->type = IR_CALL;
@@ -184,31 +209,17 @@ ir_program_t parse_ir(const wchar_t *ir_buf)
 				{
 					inst->type = IR_RET;
 				}
-				else if (expect_kw(&p, end, L"brc"))
-				{
-					inst->type = IR_BRANCH_CONDITIONAL;
-					inst->operand_cnt = 2;
-					inst->operands = calloc(inst->operand_cnt, sizeof(ir_operand_t));
-
-					expect_kw(&p, end, L"%");
-					inst->operands[0].var_idx = parse_int(&p, end);
-					expect_kw(&p, end, L",");
-
-					inst->operands[1].label = parse_ident(&p, end);
-				}
 				else if (expect_kw(&p, end, L"br"))
 				{
 					inst->type = IR_BRANCH_UNCONDITIONAL;
-					inst->operand_cnt = 1;
-					inst->operands = calloc(inst->operand_cnt, sizeof(ir_operand_t));
-					inst->operands[0].label = parse_ident(&p, end);
+				}
+				else if (expect_kw(&p, end, L"bc"))
+				{
+					inst->type = IR_BRANCH_CONDITIONAL;
 				}
 				else if (expect_kw(&p, end, L"native_asm"))
 				{
 					inst->type = IR_NATIVE_ASM;
-					inst->operand_cnt = 1;
-					inst->operands = calloc(inst->operand_cnt, sizeof(ir_operand_t));
-					inst->operands[0].label = parse_ident(&p, end);
 				}
 				else
 				{
@@ -223,6 +234,30 @@ ir_program_t parse_ir(const wchar_t *ir_buf)
 					inst->operands = calloc(inst->operand_cnt, sizeof(ir_operand_t));
 					inst->operands[0].var_idx = cur_assignment;
 					inst->operands[1].value = parse_int(&p, end);
+				}
+				else if (inst->type == IR_BRANCH_UNCONDITIONAL)
+				{
+					inst->operand_cnt = 1;
+					inst->operands = calloc(inst->operand_cnt, sizeof(ir_operand_t));
+					inst->operands[0].label = parse_ident(&p, end);
+				}
+				else if (inst->type == IR_BRANCH_CONDITIONAL)
+				{
+					inst->operand_cnt = 2;
+					inst->operands = calloc(inst->operand_cnt, sizeof(ir_operand_t));
+
+					expect_kw(&p, end, L"%");
+					inst->operands[0].var_idx = parse_int(&p, end);
+					expect_kw(&p, end, L",");
+
+					inst->operands[1].label = parse_ident(&p, end);
+				}
+				else if (inst->type == IR_NATIVE_ASM)
+				{
+					inst->operand_cnt = 1;
+					inst->operands = calloc(inst->operand_cnt, sizeof(ir_operand_t));
+					expect_kw(&p, end, L"\"");
+					inst->operands[0].label = parse_string(&p, end);
 				}
 				else if (inst->type == IR_CALL)
 				{
@@ -249,7 +284,8 @@ ir_program_t parse_ir(const wchar_t *ir_buf)
 				else if (inst->type == IR_BINARY_ADD || inst->type == IR_BINARY_SUB ||
 					 inst->type == IR_BINARY_MUL || inst->type == IR_BINARY_DIV ||
 					 inst->type == IR_BINARY_AND || inst->type == IR_BINARY_OR ||
-					 inst->type == IR_BINARY_XOR)
+					 inst->type == IR_BINARY_XOR || inst->type == IR_BINARY_GREATER ||
+					 inst->type == IR_BINARY_LESS || inst->type == IR_BINARY_EQU)
 				{
 					inst->operand_cnt = 3;
 					inst->operands = calloc(inst->operand_cnt, sizeof(ir_operand_t));
@@ -353,9 +389,31 @@ typedef enum VAR_ASSIGNMENTS
 	REG_R15 = 12,
 } assignment_type_t;
 
+
+static character_t *x86_regs[] = {
+    L"rax", L"rbx", L"rcx", L"rdx", L"rsi", L"rdi", L"r8", L"r9", L"r10", L"r11", L"r12", L"r13", L"r14", L"r15",
+};
+
 static character_t *reg_names[] = {
     L"rcx", L"rdx", L"rsi", L"rdi", L"r8", L"r9", L"r10", L"r11", L"r12", L"r13", L"r14", L"r15",
 };
+
+static character_t *m8_reg_names[] = {
+    L"al", L"bl", L"cl", L"dl", L"sil", L"dil", L"r8b", L"r9b", L"r10b", L"r11b", L"r12b", L"r13b", L"r14b", L"r15b",
+};
+
+static character_t *get_corresponding_m8_register(character_t *reg)
+{
+	for (int i = 0; i < sizeof(x86_regs) / sizeof(character_t *); i++)
+	{
+		if (wcscmp(reg, x86_regs[i]))
+			continue;
+
+		return m8_reg_names[i];
+	}
+	return 0;
+}
+
 
 typedef struct var_assignment
 {
@@ -401,8 +459,7 @@ void print_assignment(var_assignment_t *assignment)
 #define TRANSLATE_BINARY_OP(IR_NAME, INSTRUCTION)                                                                      \
 	case IR_NAME:                                                                                                  \
 		{                                                                                                      \
-			bufncpy(writer, L";-- binary op start");                                                       \
-                                                                                                                       \
+			bufncpy(writer, L"; binary-binary-op");	\
 			var_assignment_t res = assignments[inst->operands[0].var_idx];                                 \
 			var_assignment_t op1 = assignments[inst->operands[1].var_idx];                                 \
 			var_assignment_t op2 = assignments[inst->operands[2].var_idx];                                 \
@@ -417,26 +474,48 @@ void print_assignment(var_assignment_t *assignment)
 				 op2.current_reg);                                                                     \
 			bufncpy(writer, fmt_buf);                                                                      \
 			write_back_if_needed(writer, &res, false);                                                     \
-			bufncpy(writer, L";-- binary op end");                                                         \
+		}                                                                                                      \
+		break;
+
+
+#define TRANSLATE_BOOLEAN_OP(IR_NAME, SET_CONDITION)                                                                   \
+	case IR_NAME:                                                                                                  \
+		{                                                                                                      \
+			var_assignment_t res = assignments[inst->operands[0].var_idx];                                 \
+			var_assignment_t op1 = assignments[inst->operands[1].var_idx];                                 \
+			var_assignment_t op2 = assignments[inst->operands[2].var_idx];                                 \
+                                                                                                                       \
+			assign_registers(writer, &res, false);                                                         \
+			swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"mov %ls, 0", res.current_reg);                            \
+			bufncpy(writer, fmt_buf);                                                                      \
+			write_back_if_needed(writer, &res, false);                                                     \
+                                                                                                                       \
+			assign_registers(writer, &op1, false);                                                         \
+			assign_registers(writer, &op2, true);                                                          \
+			swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"cmp %ls, %ls", op1.current_reg, op2.current_reg);         \
+			bufncpy(writer, fmt_buf);                                                                      \
+                                                                                                                       \
+			swprintf(fmt_buf, FMT_BUF_MAX_LEN, SET_CONDITION L" %ls",                               \
+				 get_corresponding_m8_register(res.current_reg));                     \
+			bufncpy(writer, fmt_buf);                                                                      \
+			write_back_if_needed(writer, &res, false);                                                     \
+                                                                                                                       \
+			write_back_if_needed(writer, &res, false);                                                     \
 		}                                                                                                      \
 		break;
 
 void translate_function(buf_writer_t *writer, ir_function_t *func)
 {
 	character_t fmt_buf[FMT_BUF_MAX_LEN] = {0};
-	swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"%ls:    ; begin function", func->name);
+	swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"%ls:", func->name);
 	bufncpy(writer, fmt_buf);
 
 	// prologue
 	bufncpy(writer, L"push rbp");
 	bufncpy(writer, L"mov rbp, rsp");
 
-	// handle args
-
 	// generate variable assignments
 	var_assignment_t *assignments = calloc(func->var_cnt + 1, sizeof(var_assignment_t));
-
-
 	// first vars are args and they should be on the stack
 	int reg_vars = 0, stack_vars = 0;
 	for (int i = 0; i < func->var_cnt; i++)
@@ -458,10 +537,6 @@ void translate_function(buf_writer_t *writer, ir_function_t *func)
 		assignments[i + 1].stack_idx = i - 12;
 		stack_vars++;
 	}
-
-	for (int i = 0; i < func->var_cnt; i++)
-		print_assignment(&assignments[i]);
-
 
 	size_t total_used_stack = MAX(0, stack_vars) * INT_SZ;
 
@@ -488,7 +563,7 @@ void translate_function(buf_writer_t *writer, ir_function_t *func)
 				bufncpy(writer, inst->operands[0].label);
 				break;
 			case IR_CONST:
-				bufncpy(writer, L"; const");
+				// bufncpy(writer, L"; const");
 				var_assignment_t c1 = assignments[inst->operands[0].var_idx];
 				assign_registers(writer, &c1, false);
 
@@ -499,7 +574,7 @@ void translate_function(buf_writer_t *writer, ir_function_t *func)
 				write_back_if_needed(writer, &c1, false);
 				break;
 			case IR_ASSIGN:
-				bufncpy(writer, L"; assign");
+				// bufncpy(writer, L"; assign");
 				printf("%d %d\n", inst->operands[0].var_idx, inst->operands[1].var_idx);
 
 				var_assignment_t a1 = assignments[inst->operands[0].var_idx];
@@ -508,20 +583,16 @@ void translate_function(buf_writer_t *writer, ir_function_t *func)
 				assign_registers(writer, &a1, false);
 				assign_registers(writer, &a2, a1.type == STACK);
 
-				print_assignment(&a1);
-				print_assignment(&a2);
+				// print_assignment(&a1);
+				// print_assignment(&a2);
 
 				swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"mov %ls, %ls", a1.current_reg, a2.current_reg);
 				bufncpy(writer, fmt_buf);
 
 				write_back_if_needed(writer, &a1, false);
 				break;
-			case IR_BRANCH_UNCONDITIONAL:
-				bufcpy(writer, L"jmp ");
-				bufncpy(writer, inst->operands[0].label);
-				break;
 			case IR_RET: // prologue
-				bufncpy(writer, L"; return");
+				// bufncpy(writer, L"; return");
 				// printf("%d\n", inst->operands[0].var_idx);
 				var_assignment_t r1 = assignments[inst->operands[0].var_idx];
 
@@ -555,6 +626,12 @@ void translate_function(buf_writer_t *writer, ir_function_t *func)
 				swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"call %ls", call_label);
 				bufncpy(writer, fmt_buf);
 
+				for (int i = inst->operand_cnt - 1; i >= 2; i--)
+				{
+					swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"pop rbx");
+					bufncpy(writer, fmt_buf);
+				}
+
 				// save return value
 				assign_registers(writer, &retval, false);
 				swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"mov %ls, rax", retval.current_reg);
@@ -571,14 +648,34 @@ void translate_function(buf_writer_t *writer, ir_function_t *func)
 				TRANSLATE_BINARY_OP(IR_BINARY_OR, L"or");
 				TRANSLATE_BINARY_OP(IR_BINARY_AND, L"and");
 
-			case IR_BRANCH_CONDITIONAL:
+				TRANSLATE_BOOLEAN_OP(IR_BINARY_EQU, L"setz");
+				TRANSLATE_BOOLEAN_OP(IR_BINARY_LESS, L"setl");
+				TRANSLATE_BOOLEAN_OP(IR_BINARY_GREATER, L"setg");
+
+			case IR_BRANCH_UNCONDITIONAL:
+				swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"jmp %ls", inst->operands[0].label);
+				bufncpy(writer, fmt_buf);
 				break;
-				//
-				// TRANSLATE_BINARY_OP(IR_BINARY_EQU, L"equ");
-				// TRANSLATE_BINARY_OP(IR_BINARY_LESS, L"less");
-				// TRANSLATE_BINARY_OP(IR_BINARY_GREATER, L"greater");
+			case IR_BRANCH_CONDITIONAL:
+				// bufncpy(writer, L"; -- conditional jump");
 
+				var_assignment_t cond_var = assignments[inst->operands[0].var_idx];
+				character_t *jump_label = inst->operands[1].label;
+				assign_registers(writer, &cond_var, false);
 
+				swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"cmp %ls, 1", cond_var.current_reg);
+				bufncpy(writer, fmt_buf);
+
+				swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"je %ls", jump_label);
+				bufncpy(writer, fmt_buf);
+
+				// bufncpy(writer, L"; -- end conditional jump");
+				break;
+
+			case IR_LABEL:
+				swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"%ls:", inst->operands[0].label);
+				bufncpy(writer, fmt_buf);
+				break;
 			default:
 				// fprintf(stderr, "Unhandled opcode: %d\n", inst->type);
 				break;
@@ -586,21 +683,26 @@ void translate_function(buf_writer_t *writer, ir_function_t *func)
 		// printf("opcode=%d, op1=%d, op2=%d\n", inst->type, inst->operand1_idx, inst->operand2_idx);
 	}
 
-	// epilogue
-	bufncpy(writer, L"; end function");
+	// bufncpy(writer, L"; end function");
 }
+
+#define DEFAULT_ASM_ALLOC 1024
 
 wchar_t *translate_ir_to_x86(const wchar_t *ir_buf)
 {
 	printf("translating to x86\n");
 	ir_program_t prog = parse_ir(ir_buf);
 
-	buf_writer_t writer = {writer.buf = (character_t *)calloc(1024, sizeof(character_t)), .buf_len = 1024};
+	buf_writer_t writer = {writer.buf = (character_t *)calloc(DEFAULT_ASM_ALLOC, sizeof(character_t)),
+			       .buf_len = DEFAULT_ASM_ALLOC};
+
+	bufncpy(&writer, L"\%include \"std/std.inc\"");
+	bufncpy(&writer, L"global _start");
 
 	for (list_elem_t *fn_node = list_begin(&prog.functions); fn_node; fn_node = list_next(&prog.functions, fn_node))
 	{
 		ir_function_t *fn = fn_node->data;
-		printf("translating: %ls, args: %d varcnt: %d\n", fn->name, fn->arg_cnt, fn->var_cnt);
+		// printf("translating: %ls, args: %d varcnt: %d\n", fn->name, fn->arg_cnt, fn->var_cnt);
 		translate_function(&writer, fn);
 	}
 

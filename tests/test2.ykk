@@ -1,12 +1,9 @@
-func f(int x)
-{
-	return x;
-}
-
-
 func main()
 {
-	int b = f(1);
+	if ( 2 == 3)
+	{
+		return 3;
+	}
 
-	return b;
+	return 0;
 }

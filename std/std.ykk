@@ -1,0 +1,14 @@
+func print_num(int x)
+{
+	asm "call print_num";
+
+	return 0;
+}
+
+func get_num()
+{
+	asm "call get_num";
+	asm "pop rbp";
+	asm "ret";
+}
+

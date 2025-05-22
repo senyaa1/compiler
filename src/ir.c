@@ -14,7 +14,7 @@ static identifier_t *identifiers = 0;
 static size_t identifier_cnt = 0;
 static size_t identifiers_allocated = 0;
 
-static character_t *ENTRYPOINT_NAME = L"main";
+static character_t *ENTRYPOINT_NAME = L"_start";
 
 character_t *generate_label(character_t *prefix)
 {
@@ -294,8 +294,9 @@ int translate_recursive(buf_writer_t *writer, ast_node_t *node)
 			bufncpy(writer, line_buf);
 			return ctx.scope_var_cnt;
 		case AST_INLINE_ASM:
-			bufcpy(writer, L"native_asm ");
-			bufncpy(writer, node->data.string.value);
+			bufcpy(writer, L"native_asm \"");
+			bufcpy(writer, node->data.string.value);
+			bufncpy(writer, L"\"");
 			break;
 		case AST_FUNCTION_CALL:
 			identifier_t *called = get_function(node->data.function_call.name->data.identifier);
@@ -370,7 +371,7 @@ int translate_recursive(buf_writer_t *writer, ast_node_t *node)
 
 			int for_cond_idx = translate_recursive(writer, node->data.for_statement.condition);
 
-			swprintf(line_buf, LINE_BUF_SZ, L"brc %%%d, %ls", for_cond_idx, body_for);
+			swprintf(line_buf, LINE_BUF_SZ, L"bc %%%d, %ls", for_cond_idx, body_for);
 			bufncpy(writer, line_buf);
 
 			bufcpy(writer, L"br ");
@@ -425,7 +426,7 @@ int translate_recursive(buf_writer_t *writer, ast_node_t *node)
 			// bufncpy(writer, L"; begin if");
 
 			int cond_idx = translate_recursive(writer, node->data.if_statement.condition);
-			swprintf(line_buf, LINE_BUF_SZ, L"brc %%%d, %ls", cond_idx, if_label);
+			swprintf(line_buf, LINE_BUF_SZ, L"bc %%%d, %ls", cond_idx, if_label);
 			bufncpy(writer, line_buf);
 
 			if (node->data.if_statement.else_branch)
@@ -454,7 +455,7 @@ int translate_recursive(buf_writer_t *writer, ast_node_t *node)
 
 			int while_cond_idx = translate_recursive(writer, node->data.while_statement.condition);
 
-			swprintf(line_buf, LINE_BUF_SZ, L"brc %%%d, %ls", while_cond_idx, body_while);
+			swprintf(line_buf, LINE_BUF_SZ, L"bc %%%d, %ls", while_cond_idx, body_while);
 			bufncpy(writer, line_buf);
 
 			bufcpy(writer, L"br ");
@@ -483,7 +484,7 @@ int translate_recursive(buf_writer_t *writer, ast_node_t *node)
 }
 
 
-buf_writer_t translate_to_ir(ast_node_t *ast)
+wchar_t* translate_to_ir(ast_node_t *ast)
 {
 	buf_writer_t writer = {writer.buf = (character_t *)calloc(DEFAULT_ASM_ALLOC, sizeof(character_t)),
 			       .buf_len = DEFAULT_ASM_ALLOC};
@@ -493,5 +494,5 @@ buf_writer_t translate_to_ir(ast_node_t *ast)
 
 	free_identifiers();
 
-	return writer;
+	return writer.buf;
 }

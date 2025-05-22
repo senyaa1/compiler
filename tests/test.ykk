@@ -1,35 +1,19 @@
-func f(int x,int y, int z)
-{
-	return x + y + z;
-}
-
-
 func main()
 {
-	int n = 5;
-
-	int real = f(n,2,3);
-
-	while (n < 5)
-	{
-		n = n - 1;
-	}
-
-	if (n == 1)
-	{
-		n = 2;
-	}
-	else
-	{
-		n = 3;
-	}
-
-	asm "nop";
-
-	for (int i = 0; i < 5; i = i + 1)
-	{
-		return 1 + 1;
-	}
-
-	return 5;
+	int a = get_num();
+	print_num(a);
+	print_num(228);
+	return 0;
 }
+
+
+func _start()
+{
+	main();
+
+	asm "mov edi, ecx";
+	asm "mov eax, 60";
+	asm "syscall";
+}
+
+
