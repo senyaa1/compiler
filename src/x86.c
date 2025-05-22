@@ -144,13 +144,25 @@ ir_program_t parse_ir(const wchar_t *ir_buf)
 				{
 					inst->type = IR_BINARY_SUB;
 				}
-				else if (expect_kw(&p, end, L"lt"))
+				else if (expect_kw(&p, end, L"mul"))
 				{
-					inst->type = IR_BINARY_LESS;
+					inst->type = IR_BINARY_MUL;
 				}
-				else if (expect_kw(&p, end, L"equ"))
+				else if (expect_kw(&p, end, L"div"))
 				{
-					inst->type = IR_BINARY_EQU;
+					inst->type = IR_BINARY_DIV;
+				}
+				else if (expect_kw(&p, end, L"and"))
+				{
+					inst->type = IR_BINARY_AND;
+				}
+				else if (expect_kw(&p, end, L"or"))
+				{
+					inst->type = IR_BINARY_OR;
+				}
+				else if (expect_kw(&p, end, L"xor"))
+				{
+					inst->type = IR_BINARY_XOR;
 				}
 				else if (expect_kw(&p, end, L"const"))
 				{
@@ -212,7 +224,22 @@ ir_program_t parse_ir(const wchar_t *ir_buf)
 					inst->operands[0].var_idx = cur_assignment;
 					inst->operands[1].value = parse_int(&p, end);
 				}
-				else if(inst->type == IR_RET)
+				else if (inst->type == IR_CALL)
+				{
+					character_t *call_label = parse_ident(&p, end);
+					int arg_count = parse_int(&p, end);
+
+					inst->operand_cnt = arg_count + 2;
+					inst->operands = calloc(inst->operand_cnt, sizeof(ir_operand_t));
+					inst->operands[0].var_idx = cur_assignment;
+					inst->operands[1].label = call_label;
+					for (int i = 0; i < arg_count; i++)
+					{
+						expect_kw(&p, end, L"%");
+						inst->operands[2 + i].var_idx = parse_int(&p, end);
+					}
+				}
+				else if (inst->type == IR_RET)
 				{
 					expect_kw(&p, end, L"%");
 					inst->operand_cnt = 1;
@@ -220,19 +247,23 @@ ir_program_t parse_ir(const wchar_t *ir_buf)
 					inst->operands[0].var_idx = parse_int(&p, end);
 				}
 				else if (inst->type == IR_BINARY_ADD || inst->type == IR_BINARY_SUB ||
-					 inst->type == IR_BINARY_LESS || inst->type == IR_BINARY_EQU)
+					 inst->type == IR_BINARY_MUL || inst->type == IR_BINARY_DIV ||
+					 inst->type == IR_BINARY_AND || inst->type == IR_BINARY_OR ||
+					 inst->type == IR_BINARY_XOR)
 				{
-					inst->operand_cnt = 2;
+					inst->operand_cnt = 3;
 					inst->operands = calloc(inst->operand_cnt, sizeof(ir_operand_t));
 
+					inst->operands[0].var_idx = cur_assignment;
+
 					expect_kw(&p, end, L"%");
-					inst->operands[0].var_idx = parse_int(&p, end);
+					inst->operands[1].var_idx = parse_int(&p, end);
 					skip_ws(&p, end);
 					expect_kw(&p, end, L",");
 
 					skip_ws(&p, end);
 					expect_kw(&p, end, L"%");
-					inst->operands[1].var_idx = parse_int(&p, end);
+					inst->operands[2].var_idx = parse_int(&p, end);
 				}
 				else if (inst->type == IR_ASSIGN || inst->type == IR_VARDECL)
 				{
@@ -344,8 +375,8 @@ static void assign_registers(buf_writer_t *writer, var_assignment_t *assignment,
 	}
 
 	character_t fmt_buf[FMT_BUF_MAX_LEN] = {0};
-	swprintf(fmt_buf, FMT_BUF_MAX_LEN, (to_rcx ? L"mov rcx, [rbp-%d]" : L"mov rbx, [rbp-%d]"),
-		 assignment->stack_idx);
+	swprintf(fmt_buf, FMT_BUF_MAX_LEN, (to_rcx ? L"mov rcx, [rbp%c%d]" : L"mov rbx, [rbp%c%d]"),
+		 (assignment->stack_idx >= 0 ? '-' : '+'), abs(assignment->stack_idx * INT_SZ));
 	assignment->current_reg = (to_rcx ? L"rcx" : L"rbx");
 	bufncpy(writer, fmt_buf);
 }
@@ -356,15 +387,39 @@ static void write_back_if_needed(buf_writer_t *writer, var_assignment_t *assignm
 		return;
 
 	character_t fmt_buf[FMT_BUF_MAX_LEN] = {0};
-	swprintf(fmt_buf, FMT_BUF_MAX_LEN, (to_rcx ? L"mov [rbp-%d], rcx" : L"mov [rbp-%d], rbx"),
-		 assignment->stack_idx);
+	swprintf(fmt_buf, FMT_BUF_MAX_LEN, (to_rcx ? L"mov [rbp%c%d], rcx" : L"mov [rbp%c%d], rbx"),
+		 (assignment->stack_idx >= 0 ? '-' : '+'), abs(assignment->stack_idx * INT_SZ));
 	bufncpy(writer, fmt_buf);
 }
 
-void print_assignment(var_assignment_t* assignment)
+void print_assignment(var_assignment_t *assignment)
 {
-	printf("type: %d assigned reg: %ls or stack #%d\n", assignment->type, assignment->current_reg, assignment->stack_idx);
+	printf("type: %d assigned reg: %ls or stack #%d\n", assignment->type, assignment->current_reg,
+	       assignment->stack_idx);
 }
+
+#define TRANSLATE_BINARY_OP(IR_NAME, INSTRUCTION)                                                                      \
+	case IR_NAME:                                                                                                  \
+		{                                                                                                      \
+			bufncpy(writer, L";-- binary op start");                                                       \
+                                                                                                                       \
+			var_assignment_t res = assignments[inst->operands[0].var_idx];                                 \
+			var_assignment_t op1 = assignments[inst->operands[1].var_idx];                                 \
+			var_assignment_t op2 = assignments[inst->operands[2].var_idx];                                 \
+                                                                                                                       \
+			assign_registers(writer, &res, false);                                                         \
+			assign_registers(writer, &op1, true);                                                          \
+			swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"mov %ls, %ls", res.current_reg, op1.current_reg);         \
+			bufncpy(writer, fmt_buf);                                                                      \
+                                                                                                                       \
+			assign_registers(writer, &op2, true);                                                          \
+			swprintf(fmt_buf, FMT_BUF_MAX_LEN, INSTRUCTION L" %ls, %ls", res.current_reg,                  \
+				 op2.current_reg);                                                                     \
+			bufncpy(writer, fmt_buf);                                                                      \
+			write_back_if_needed(writer, &res, false);                                                     \
+			bufncpy(writer, L";-- binary op end");                                                         \
+		}                                                                                                      \
+		break;
 
 void translate_function(buf_writer_t *writer, ir_function_t *func)
 {
@@ -376,22 +431,39 @@ void translate_function(buf_writer_t *writer, ir_function_t *func)
 	bufncpy(writer, L"push rbp");
 	bufncpy(writer, L"mov rbp, rsp");
 
+	// handle args
+
 	// generate variable assignments
 	var_assignment_t *assignments = calloc(func->var_cnt + 1, sizeof(var_assignment_t));
 
+
+	// first vars are args and they should be on the stack
+	int reg_vars = 0, stack_vars = 0;
 	for (int i = 0; i < func->var_cnt; i++)
 	{
-		if (i < 12)
+		if (i < func->arg_cnt)
+		{
+			assignments[i + 1].type = STACK;
+			assignments[i + 1].stack_idx = -(i + 2);
+			continue;
+		}
+
+		if (reg_vars < 12)
 		{
 			assignments[i + 1].type = i + 1;
+			reg_vars++;
 			continue;
 		}
 		assignments[i + 1].type = STACK;
 		assignments[i + 1].stack_idx = i - 12;
+		stack_vars++;
 	}
 
+	for (int i = 0; i < func->var_cnt; i++)
+		print_assignment(&assignments[i]);
 
-	size_t total_used_stack = MAX(0, func->var_cnt - 12) * INT_SZ;
+
+	size_t total_used_stack = MAX(0, stack_vars) * INT_SZ;
 
 	// allocate function stack frame
 	if (total_used_stack)
@@ -439,17 +511,16 @@ void translate_function(buf_writer_t *writer, ir_function_t *func)
 				print_assignment(&a1);
 				print_assignment(&a2);
 
-
 				swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"mov %ls, %ls", a1.current_reg, a2.current_reg);
 				bufncpy(writer, fmt_buf);
 
-				// write_back_if_needed(writer, &a1, false);
+				write_back_if_needed(writer, &a1, false);
 				break;
 			case IR_BRANCH_UNCONDITIONAL:
 				bufcpy(writer, L"jmp ");
 				bufncpy(writer, inst->operands[0].label);
 				break;
-			case IR_RET:		// prologue
+			case IR_RET: // prologue
 				bufncpy(writer, L"; return");
 				// printf("%d\n", inst->operands[0].var_idx);
 				var_assignment_t r1 = assignments[inst->operands[0].var_idx];
@@ -467,6 +538,47 @@ void translate_function(buf_writer_t *writer, ir_function_t *func)
 				bufncpy(writer, L"pop rbp");
 				bufncpy(writer, L"ret");
 				break;
+
+			case IR_CALL:
+				bufncpy(writer, L"; call");
+				var_assignment_t retval = assignments[inst->operands[0].var_idx];
+				character_t *call_label = inst->operands[1].label;
+
+				for (int i = 2; i < inst->operand_cnt; i++)
+				{
+					var_assignment_t call_op = assignments[inst->operands[i].var_idx];
+					assign_registers(writer, &call_op, false);
+					swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"push %ls", call_op.current_reg);
+					bufncpy(writer, fmt_buf);
+				}
+
+				swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"call %ls", call_label);
+				bufncpy(writer, fmt_buf);
+
+				// save return value
+				assign_registers(writer, &retval, false);
+				swprintf(fmt_buf, FMT_BUF_MAX_LEN, L"mov %ls, rax", retval.current_reg);
+				bufncpy(writer, fmt_buf);
+				write_back_if_needed(writer, &retval, false);
+				break;
+
+
+				TRANSLATE_BINARY_OP(IR_BINARY_ADD, L"add");
+				TRANSLATE_BINARY_OP(IR_BINARY_SUB, L"sub");
+				TRANSLATE_BINARY_OP(IR_BINARY_MUL, L"mul");
+				TRANSLATE_BINARY_OP(IR_BINARY_DIV, L"div");
+				TRANSLATE_BINARY_OP(IR_BINARY_XOR, L"xor");
+				TRANSLATE_BINARY_OP(IR_BINARY_OR, L"or");
+				TRANSLATE_BINARY_OP(IR_BINARY_AND, L"and");
+
+			case IR_BRANCH_CONDITIONAL:
+				break;
+				//
+				// TRANSLATE_BINARY_OP(IR_BINARY_EQU, L"equ");
+				// TRANSLATE_BINARY_OP(IR_BINARY_LESS, L"less");
+				// TRANSLATE_BINARY_OP(IR_BINARY_GREATER, L"greater");
+
+
 			default:
 				// fprintf(stderr, "Unhandled opcode: %d\n", inst->type);
 				break;

@@ -1,6 +1,12 @@
+func f(int x)
+{
+	return x;
+}
+
+
 func main()
 {
-	int a = 5;
+	int b = f(1);
 
-	return a;
+	return b;
 }

@@ -340,22 +340,19 @@ int translate_recursive(buf_writer_t *writer, ast_node_t *node)
 			}
 
 
-			swprintf(line_buf, LINE_BUF_SZ, L"%%%d = call %ls (", ++ctx.scope_var_cnt,
-				 called->value.function.label);
+			swprintf(line_buf, LINE_BUF_SZ, L"%%%d = call %ls %d", ++ctx.scope_var_cnt,
+				 called->value.function.label, node->data.function_call.arg_count);
 			bufcpy(writer, line_buf);
 
 			for (int i = 0; i < node->data.function_call.arg_count; i++)
 			{
-				if (i > 0)
-					bufcpy(writer, L", ");
-
-				swprintf(line_buf, LINE_BUF_SZ, L"%%%d", arg_idxs[i]);
+				swprintf(line_buf, LINE_BUF_SZ, L" %%%d", arg_idxs[i]);
 				bufcpy(writer, line_buf);
 			}
-			bufncpy(writer, L")");
+			bufncpy(writer, L"");
 
 			free(arg_idxs);
-			break;
+			return ctx.scope_var_cnt;
 		case AST_RETURN:
 			int retval_idx = translate_recursive(writer, node->data.return_statement.value);
 			swprintf(line_buf, LINE_BUF_SZ, L"ret %%%d", retval_idx);
