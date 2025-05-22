@@ -1,12 +1,12 @@
 #pragma once
 
-#include <stdlib.h>
 #include "lexer.h"
+#include <stdlib.h>
 
-#define MAX_LINE_LENGTH 1024
+#define PATH_SEP L'/'
 
-static const size_t MAX_INCLUDE_DEPTH = 50;
-static const size_t DEFAULT_PREPROCESSOR_ALLOC = 256;
-static const character_t* INCLUDE_STATEMENT = "#include";
+#define MAX_LINE 4096
+#define MAX_DEPTH 32
 
-int preprocess(const char* file_path, char** buffer);
+int preprocess(const char *file_path, wchar_t **buffer);
+	

@@ -36,21 +36,21 @@ int main(int argc, char **argv)
 	setlocale(LC_ALL, "ru_RU.UTF-8");
 
 	wchar_t *source_text = 0;
-	size_t len = read_file(argv[1], &source_text);
-	if (!len)
-	{
-		print_error("Could not open file\n");
-		free(source_text);
-		return 0;
-	}
+	// size_t len = read_file(argv[1], &source_text);
+	// if (!len)
+	// {
+	// 	print_error("Could not open file\n");
+	// 	free(source_text);
+	// 	return 0;
+	// }
 
-	// if (preprocess(argv[1], &source_text))
-	// printf("preprocessed text: %s\n", source_text);
+	preprocess(argv[1], &source_text);
+	printf("preprocessed text: %ls\n", source_text);
 
 	token_t *tokens = lex(source_text);
 
 	ast_node_t *ast = parse_program(tokens);
-	draw_ast(ast, "ast.png");
+	draw_ast(ast, "out/ast.png");
 
 	printf("Parsed program successfully.\n");
 

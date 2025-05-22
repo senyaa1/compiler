@@ -1,3 +1,7 @@
+#include "std.ykk"
+
+// this is a commment
+
 func main()
 {
 	int a = get_num();
